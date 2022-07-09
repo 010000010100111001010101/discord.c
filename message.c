@@ -290,6 +290,53 @@ discord_message *message_init(discord_state *state, json_object *data){
     return message;
 }
 
+bool message_delete(const discord_message *message, const char *reason){
+    if (!message){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] message_delete() - message is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    discord_http_response *res = http_delete_message(
+        message->state->http,
+        reason,
+        message->channel_id,
+        message->id
+    );
+
+    if (!res){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] message_delete() - http_delete_message call failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    bool success = res->status == 204;
+
+    http_response_free(res);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] message_delete() - API request failed: %s\n",
+            __FILE__,
+            json_object_to_json_string(res->data)
+        );
+    }
+
+    return success;
+}
+
 void message_free(void *messageptr){
     discord_message *message = messageptr;
 

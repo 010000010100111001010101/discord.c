@@ -345,6 +345,7 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
         }
 
         gateway->state->user = user;
+        *gateway->state->user_pointer = user;
 
         const char *sessionid = json_object_get_string(json_object_object_get(data, "session_id"));
 
@@ -386,6 +387,14 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
 
         return success;
     }
+
+    log_write(
+        logger,
+        LOG_DEBUG,
+        "[%s] handle_gateway_dispatch() - event %s is not preprocessed -- data is a json_object\n",
+        __FILE__,
+        name
+    );
 
     return event(gateway->state->event_context, data);
 }
@@ -1109,7 +1118,7 @@ bool gateway_connect(discord_gateway *gateway){
     if (!gateway){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_ERROR,
             "[%s] gateway_connect() - gateway is NULL\n",
             __FILE__
         );
@@ -1210,6 +1219,27 @@ bool gateway_connect(discord_gateway *gateway){
 }
 
 void gateway_disconnect(discord_gateway *gateway){
+    if (!gateway){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] gateway_disconnect() - gateway is NULL\n",
+            __FILE__
+        );
+
+        return;
+    }
+    else if (!gateway->connected){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] gateway_disconnect() - gateway is not connected\n",
+            __FILE__
+        );
+
+        return;
+    }
+
     gateway->connected = false;
 
     lws_close_reason(
@@ -1223,6 +1253,17 @@ void gateway_disconnect(discord_gateway *gateway){
 }
 
 bool gateway_run_loop(discord_gateway *gateway){
+    if (!gateway){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] gateway_run_loop() - gateway is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
     while (gateway->running){
         int ret = lws_service(gateway->context, 0);
 

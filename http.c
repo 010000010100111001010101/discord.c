@@ -994,7 +994,7 @@ discord_http *http_init(const char *token, const discord_http_options *opts){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_init() - curl_global_init() failed\n",
+            "[%s] http_init() - curl_global_init call failed\n",
             __FILE__
         );
 
@@ -1066,7 +1066,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - create_request_bucket() failed\n",
+            "[%s] http_request() - create_request_bucket call failed\n",
             __FILE__
         );
 
@@ -1093,7 +1093,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - failed to create handle\n"
+            "[%s] http_request() - curl_easy_init call failed\n"
             __FILE__
         );
 
@@ -1106,7 +1106,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - set_request_method() failed\n",
+            "[%s] http_request() - set_request_method call failed\n",
             __FILE__
         );
 
@@ -1120,7 +1120,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - set_request_url() failed\n",
+            "[%s] http_request() - set_request_url call failed\n",
             __FILE__
         );
 
@@ -1136,7 +1136,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - create_request_header_list() failed\n",
+            "[%s] http_request() - create_request_header_list call failed\n",
             __FILE__
         );
 
@@ -1150,7 +1150,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - set_request_headers() failed\n",
+            "[%s] http_request() - set_request_headers call failed\n",
             __FILE__
         );
 
@@ -1167,7 +1167,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - set_response_data_writer() failed\n",
+            "[%s] http_request() - set_response_data_writer call failed\n",
             __FILE__
         );
 
@@ -1184,7 +1184,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - map_init() failed\n",
+            "[%s] http_request() - map_init call failed\n",
             __FILE__
         );
 
@@ -1199,7 +1199,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - set_response_header_writer() failed\n",
+            "[%s] http_request() - set_response_header_writer call failed\n",
             __FILE__
         );
 
@@ -1238,7 +1238,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - create_response() failed\n",
+            "[%s] http_request() - create_response call failed\n",
             __FILE__
         );
 
@@ -1255,7 +1255,7 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] http_request() - json_tokener_parse() failed\n",
+                "[%s] http_request() - json_tokener_parse call failed\n",
                 __FILE__
             );
         }
@@ -1574,6 +1574,102 @@ discord_http_response *http_create_message(discord_http *http, snowflake channel
 
     discord_http_request_options opts = {0};
     opts.data = data;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_POST,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_edit_message(discord_http *http, snowflake channelid, snowflake messageid, json_object *data){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64,
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_edit_message() - failed to create path string\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_PATCH,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_message(discord_http *http, const char *reason, snowflake channelid, snowflake messageid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64,
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_message() - failed to create path string\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_bulk_delete_messages(discord_http *http, const char *reason, snowflake channelid, json_object *data){
+    char *path = string_create("/channels/%" PRIu64 "/messages/bulk-delete", channelid);
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_bulk_delete_messages() - failed to create path string\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+    opts.reason = reason;
 
     discord_http_response *response = http_request(
         http,

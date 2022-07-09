@@ -4,6 +4,16 @@
 
 static const logctx *logger = NULL;
 
+static const char *statuses[] = {
+    "offline",
+    "invisible",
+    "idle",
+    "dnd",
+    "online",
+
+    NULL
+};
+
 discord_state *state_init(const char *token, const discord_state_options *opts){
     if (!token){
         log_write(
@@ -30,6 +40,8 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
     }
 
     state->token = token;
+
+    state->user_pointer = NULL;
 
     if (opts){
         logger = opts->log;
@@ -157,6 +169,30 @@ bool state_set_gateway_presence(discord_state *state, const time_t *since, const
         );
 
         return false;
+    }
+
+    if (status){
+        bool found = false;
+
+        for (size_t index = 0; statuses[index]; ++index){
+            if (!strcmp(statuses[index], status)){
+                found = true;
+
+                break;
+            }
+        }
+
+        if (!found){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] state_set_gateway_presence() - valid statuses are offline, invisible, idle, dnd, online\n",
+                __FILE__,
+                status
+            );
+
+            return false;
+        }
     }
 
     log_write(
@@ -391,7 +427,7 @@ const discord_user *state_get_user(discord_state *state, snowflake id){
         log_write(
             logger,
             LOG_DEBUG,
-            "[%s] state_get_user() - %" PRIu64 " not found in state->users map\n",
+            "[%s] state_get_user() - %" PRIu64 " not found in users map\n",
             __FILE__,
             id
         );

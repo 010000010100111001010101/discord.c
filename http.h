@@ -65,6 +65,9 @@ discord_http_response *http_get_channel(discord_http *, snowflake);
 
 /* Message */
 discord_http_response *http_create_message(discord_http *, snowflake, json_object *);
+discord_http_response *http_edit_message(discord_http *, snowflake, snowflake, json_object *);
+discord_http_response *http_delete_message(discord_http *, const char *, snowflake, snowflake);
+discord_http_response *http_bulk_delete_messages(discord_http *, const char *, snowflake, json_object *);
 
 void http_response_free(discord_http_response *);
 void http_free(discord_http *);

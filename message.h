@@ -125,6 +125,9 @@ typedef struct discord_message {
 
 discord_message *message_init(discord_state *, json_object *);
 
+//bool message_edit(discord_message *, params);
+bool message_delete(const discord_message *, const char *);
+
 void message_free(void *);
 
 json_object *message_reply_to_json(const discord_message_reply *);

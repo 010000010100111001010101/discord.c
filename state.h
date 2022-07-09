@@ -70,6 +70,7 @@ typedef struct discord_state {
     const logctx *log;
     discord_gateway_intents intent;
     void *event_context;
+    void **user_pointer;
 
     json_object *presence;
     discord_user *user;

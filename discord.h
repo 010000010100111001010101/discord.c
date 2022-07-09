@@ -26,6 +26,7 @@ typedef struct discord {
     discord_state *state;
 
     discord_gateway *gateway;
+    const discord_user *user;
 } discord;
 
 discord *discord_init(const char *, const discord_options *);

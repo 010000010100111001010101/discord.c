@@ -67,6 +67,7 @@ discord *discord_init(const char *token, const discord_options *opts){
     }
 
     client->state->event_context = client;
+    client->state->user_pointer = (void *)&client->user;
 
     client->gateway = gateway_init(client->state, &gopts);
 
