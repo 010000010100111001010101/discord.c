@@ -304,9 +304,9 @@ bool message_delete(const discord_message *message, const char *reason){
 
     discord_http_response *res = http_delete_message(
         message->state->http,
-        reason,
         message->channel_id,
-        message->id
+        message->id,
+        reason
     );
 
     if (!res){

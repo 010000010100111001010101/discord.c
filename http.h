@@ -2,6 +2,7 @@
 #define HTTP_H
 
 #include "map.h"
+
 #include "snowflake.h"
 #include "state.h"
 
@@ -61,13 +62,40 @@ discord_http_response *http_create_dm(discord_http *, snowflake);
 discord_http_response *http_get_user_connections(discord_http *);
 
 /* Channel */
+discord_http_response *http_trigger_typing_indicator(discord_http *, snowflake);
+discord_http_response *http_follow_news_channel(discord_http *, snowflake, json_object *);
+
 discord_http_response *http_get_channel(discord_http *, snowflake);
+discord_http_response *http_edit_channel(discord_http *, snowflake, json_object *, const char *);
+discord_http_response *http_delete_channel(discord_http *, snowflake, const char *);
+
+discord_http_response *http_edit_channel_permissions(discord_http *, snowflake, snowflake, json_object *, const char *);
+discord_http_response *http_delete_channel_permission(discord_http *, snowflake, snowflake, const char *);
+
+discord_http_response *http_get_channel_invites(discord_http *, snowflake);
+discord_http_response *http_create_channel_invite(discord_http *, snowflake, json_object *, const char *);
+
+discord_http_response *http_get_pinned_messages(discord_http *, snowflake);
+discord_http_response *http_pin_message(discord_http *, snowflake, snowflake, const char *);
+discord_http_response *http_unpin_message(discord_http *, snowflake, snowflake, const char *);
 
 /* Message */
+discord_http_response *http_get_channel_messages(discord_http *, snowflake, json_object *);
+discord_http_response *http_get_channel_message(discord_http *, snowflake, snowflake);
+
+discord_http_response *http_crosspost_message(discord_http *, snowflake, snowflake);
+
 discord_http_response *http_create_message(discord_http *, snowflake, json_object *);
 discord_http_response *http_edit_message(discord_http *, snowflake, snowflake, json_object *);
-discord_http_response *http_delete_message(discord_http *, const char *, snowflake, snowflake);
-discord_http_response *http_bulk_delete_messages(discord_http *, const char *, snowflake, json_object *);
+discord_http_response *http_delete_message(discord_http *, snowflake, snowflake, const char *);
+discord_http_response *http_bulk_delete_messages(discord_http *, snowflake, json_object *, const char *);
+
+discord_http_response *http_get_reactions(discord_http *, snowflake, snowflake, const char *);
+discord_http_response *http_create_reaction(discord_http *, snowflake, snowflake, const char *);
+discord_http_response *http_delete_own_reaction(discord_http *, snowflake, snowflake, const char *);
+discord_http_response *http_delete_user_reaction(discord_http *, snowflake, snowflake, snowflake, const char *);
+discord_http_response *http_delete_all_reactions(discord_http *, snowflake, snowflake);
+discord_http_response *http_delete_all_reactions_for_emoji(discord_http *, snowflake, snowflake, const char *);
 
 void http_response_free(discord_http_response *);
 void http_free(discord_http *);

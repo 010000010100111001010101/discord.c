@@ -1276,18 +1276,22 @@ discord_http_response *http_get_bot_gateway(discord_http *http){
     return http_request(http, HTTP_GET, "/gateway/bot", NULL);
 }
 
+/* User */
 discord_http_response *http_get_current_user(discord_http *http){
     return http_request(http, HTTP_GET, "/users/@me", NULL);
 }
 
 discord_http_response *http_get_user(discord_http *http, snowflake userid){
-    char *path = string_create("/users/%" PRIu64, userid);
+    char *path = string_create(
+        "/users/%" PRIu64,
+        userid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_get_user() - failed to create path string\n",
+            "[%s] http_get_user() - string_create call failed\n",
             __FILE__
         );
 
@@ -1423,13 +1427,16 @@ discord_http_response *http_get_current_user_guilds(discord_http *http, snowflak
 }
 
 discord_http_response *http_get_current_user_guild_member(discord_http *http, snowflake guildid){
-    char *path = string_create("/users/@me/guilds/%" PRIu64 "/member", guildid);
+    char *path = string_create(
+        "/users/@me/guilds/%" PRIu64 "/member",
+        guildid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_get_current_user_guild_member() - failed to create path string\n",
+            "[%s] http_get_current_user_guild_member() - string_create call failed\n",
             __FILE__
         );
 
@@ -1449,13 +1456,16 @@ discord_http_response *http_get_current_user_guild_member(discord_http *http, sn
 }
 
 discord_http_response *http_leave_guild(discord_http *http, snowflake guildid){
-    char *path = string_create("/users/@me/guilds/%" PRIu64, guildid);
+    char *path = string_create(
+        "/users/@me/guilds/%" PRIu64,
+        guildid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_leave_guild() - failed to create path string\n",
+            "[%s] http_leave_guild() - string_create call failed\n",
             __FILE__
         );
 
@@ -1531,14 +1541,78 @@ discord_http_response *http_get_user_connections(discord_http *http){
 }
 
 /* Channel */
-discord_http_response *http_get_channel(discord_http *http, snowflake channelid){
-    char *path = string_create("/channels/%" PRIu64, channelid);
+discord_http_response *http_trigger_typing_indicator(discord_http *http, snowflake channelid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/typing",
+        channelid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_get_channel() - failed to create path string\n",
+            "[%s] http_trigger_typing_indicator() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_POST,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_follow_news_channel(discord_http *http, snowflake channelid, json_object *data){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/followers",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_follow_news_channel() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_POST,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_get_channel(discord_http *http, snowflake channelid){
+    char *path = string_create(
+        "/channels/%" PRIu64,
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_channel() - string_create call failed\n",
             __FILE__
         );
 
@@ -1557,15 +1631,399 @@ discord_http_response *http_get_channel(discord_http *http, snowflake channelid)
     return response;
 }
 
-/* Messages */
-discord_http_response *http_create_message(discord_http *http, snowflake channelid, json_object *data){
-    char *path = string_create("/channels/%" PRIu64 "/messages", channelid);
+discord_http_response *http_edit_channel(discord_http *http, snowflake channelid, json_object *data, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64,
+        channelid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_create_message() - failed to create path string\n",
+            "[%s] http_edit_channel() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_PATCH,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_channel(discord_http *http, snowflake channelid, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64,
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_channel() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_edit_channel_permissions(discord_http *http, snowflake channelid, snowflake overwriteid, json_object *data, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/permissions/%" PRIu64,
+        channelid,
+        overwriteid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_edit_channel_permissions() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_PUT,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_channel_permission(discord_http *http, snowflake channelid, snowflake overwriteid, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/permissions/%" PRIu64,
+        channelid,
+        overwriteid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_channel_permission() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_get_channel_invites(discord_http *http, snowflake channelid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/invites",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_channel_invites() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_GET,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_create_channel_invite(discord_http *http, snowflake channelid, json_object *data, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/invites",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_create_channel_invite() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_POST,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_get_pinned_messages(discord_http *http, snowflake channelid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/pins",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_pinned_messages() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_GET,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_pin_message(discord_http *http, snowflake channelid, snowflake messageid, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/pins/%" PRIu64,
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_pin_message() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_PUT,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_unpin_message(discord_http *http, snowflake channelid, snowflake messageid, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/pins/%" PRIu64,
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_unpin_message() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.reason = reason;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+/* Message */
+discord_http_response *http_get_channel_messages(discord_http *http, snowflake channelid, json_object *data){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_channel_messages() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_request_options opts = {0};
+    opts.data = data;
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_GET,
+        path,
+        &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_get_channel_message(discord_http *http, snowflake channelid, snowflake messageid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64,
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_channel_message() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_GET,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_crosspost_message(discord_http *http, snowflake channelid, snowflake messageid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/crosspost",
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_crosspost_message() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_POST,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_create_message(discord_http *http, snowflake channelid, json_object *data){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages",
+        channelid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_create_message() - string_create call failed\n",
             __FILE__
         );
 
@@ -1598,7 +2056,7 @@ discord_http_response *http_edit_message(discord_http *http, snowflake channelid
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_edit_message() - failed to create path string\n",
+            "[%s] http_edit_message() - string_create call failed\n",
             __FILE__
         );
 
@@ -1620,7 +2078,7 @@ discord_http_response *http_edit_message(discord_http *http, snowflake channelid
     return response;
 }
 
-discord_http_response *http_delete_message(discord_http *http, const char *reason, snowflake channelid, snowflake messageid){
+discord_http_response *http_delete_message(discord_http *http, snowflake channelid, snowflake messageid, const char *reason){
     char *path = string_create(
         "/channels/%" PRIu64 "/messages/%" PRIu64,
         channelid,
@@ -1631,7 +2089,7 @@ discord_http_response *http_delete_message(discord_http *http, const char *reaso
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_delete_message() - failed to create path string\n",
+            "[%s] http_delete_message() - string_create call failed\n",
             __FILE__
         );
 
@@ -1653,14 +2111,17 @@ discord_http_response *http_delete_message(discord_http *http, const char *reaso
     return response;
 }
 
-discord_http_response *http_bulk_delete_messages(discord_http *http, const char *reason, snowflake channelid, json_object *data){
-    char *path = string_create("/channels/%" PRIu64 "/messages/bulk-delete", channelid);
+discord_http_response *http_bulk_delete_messages(discord_http *http, snowflake channelid, json_object *data, const char *reason){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/bulk-delete",
+        channelid
+    );
 
     if (!path){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_bulk_delete_messages() - failed to create path string\n",
+            "[%s] http_bulk_delete_messages() - string_create call failed\n",
             __FILE__
         );
 
@@ -1676,6 +2137,192 @@ discord_http_response *http_bulk_delete_messages(discord_http *http, const char 
         HTTP_POST,
         path,
         &opts
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_get_reactions(discord_http *http, snowflake channelid, snowflake messageid, const char *emoji){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions/%s",
+        channelid,
+        messageid,
+        emoji
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_get_reactions() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_GET,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_create_reaction(discord_http *http, snowflake channelid, snowflake messageid, const char *emoji){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions/%s",
+        channelid,
+        messageid,
+        emoji
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_create_reaction() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_PUT,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_own_reaction(discord_http *http, snowflake channelid, snowflake messageid, const char *emoji){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions/%s/@me",
+        channelid,
+        messageid,
+        emoji
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_own_reaction() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_user_reaction(discord_http *http, snowflake channelid, snowflake messageid, snowflake userid, const char *emoji){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions/%s/%" PRIu64,
+        channelid,
+        messageid,
+        emoji,
+        userid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_user_reaction() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_all_reactions(discord_http *http, snowflake channelid, snowflake messageid){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions",
+        channelid,
+        messageid
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_all_reactions() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        NULL
+    );
+
+    free(path);
+
+    return response;
+}
+
+discord_http_response *http_delete_all_reactions_for_emoji(discord_http *http, snowflake channelid, snowflake messageid, const char *emoji){
+    char *path = string_create(
+        "/channels/%" PRIu64 "/messages/%" PRIu64 "/reactions/%s",
+        channelid,
+        messageid,
+        emoji
+    );
+
+    if (!path){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] http_delete_all_reactions_for_emoji() - string_create call failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    discord_http_response *response = http_request(
+        http,
+        HTTP_DELETE,
+        path,
+        NULL
     );
 
     free(path);
