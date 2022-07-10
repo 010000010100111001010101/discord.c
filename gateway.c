@@ -840,6 +840,8 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
             __FILE__
         );
 
+        lws_set_timer_usecs(gateway->wsi, LWS_SET_TIMER_USEC_CANCEL);
+
         closeconn = true;
 
         if (!gateway->reconnect){
