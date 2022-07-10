@@ -91,7 +91,24 @@ static bool is_rate_limited(discord_gateway *gateway){
     return ratelimited;
 }
 
+static void cancel_gateway_heartbeating(discord_gateway *gateway){
+    gateway->awaiting_heartbeat_ack = false;
+
+    lws_set_timer_usecs(gateway->wsi, LWS_SET_TIMER_USEC_CANCEL);
+}
+
 static bool send_gateway_heartbeat(discord_gateway *gateway){
+    if (!gateway->connected){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] send_gateway_heartbeat() - tried to send heartbeat but gateway is not connected\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
     if (gateway->awaiting_heartbeat_ack){
         log_write(
             logger,
@@ -456,9 +473,8 @@ static bool handle_gateway_payload(discord_gateway *gateway){
             __FILE__
         );
 
-        gateway->awaiting_heartbeat_ack = false;
+        cancel_gateway_heartbeating(gateway);
 
-        lws_set_timer_usecs(gateway->wsi, LWS_SET_TIMER_USEC_CANCEL);
         lws_set_timer_usecs(gateway->wsi, 0);
 
         break;
@@ -839,8 +855,6 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
             "[%s] handle_gateway_event() - LWS_CALLBACK_WSI_DESTROY event triggered\n",
             __FILE__
         );
-
-        lws_set_timer_usecs(gateway->wsi, LWS_SET_TIMER_USEC_CANCEL);
 
         closeconn = true;
 
@@ -1243,6 +1257,8 @@ void gateway_disconnect(discord_gateway *gateway){
     }
 
     gateway->connected = false;
+
+    cancel_gateway_heartbeating(gateway);
 
     lws_close_reason(
         gateway->wsi,
