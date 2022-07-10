@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "str.h"
 
 #include "log.h"
@@ -356,6 +358,17 @@ char *string_upper(char *input){
 }
 
 bool string_from_time(const char *format, char *output, size_t outputsize){
+    if (!output){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] string_from_time() - format is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
     time_t timet = time(NULL);
     struct tm *timetm = localtime(&timet);
 
@@ -388,7 +401,7 @@ bool string_to_int(const char *input, int *output, int base){
     if (!input){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_ERROR,
             "[%s] string_to_int() - input is NULL\n",
             __FILE__
         );

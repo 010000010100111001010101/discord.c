@@ -96,8 +96,8 @@ typedef struct discord_message {
     const discord_user *author;
     discord_member *member;
     char content[2001];
-    time_t timestamp;
-    time_t edited_timestamp;
+    char timestamp[33];
+    char edited_timestamp[33];
     bool tts;
     bool mention_everyone;
     list *mentions;
@@ -115,7 +115,7 @@ typedef struct discord_message {
     snowflake application_id;
     //discord_message_reference *message_reference;
     int flags;
-    //const discord_message *referenced_message;
+    //const discord_message *referenced_message; store in cache and keep id?
     //const discord_interaction *interaction;
     const discord_channel *thread;
     list *components;

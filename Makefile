@@ -1,4 +1,4 @@
-PROG = dsc
+PROG = discordc
 SRCS = main.c \
        discord.c state.c channel.c user.c member.c message.c snowflake.c http.c gateway.c \
        c-utils/json_utils.c c-utils/log.c c-utils/str.c c-utils/list.c c-utils/map.c c-utils/hashers/spooky.c
@@ -9,7 +9,7 @@ DEBUGFLAGS = -Og -ggdb -DDEBUG -fsanitize=address
 CFLAGS = -std=c18 -pedantic -Wall -Wextra -Werror $(IGNORE) $(DEBUGFLAGS)
 INCLUDES = -I/usr/local/include -I/usr/include -I./c-utils
 
-LDFLAGS = -L/usr/local/lib -L/usr/lib
+LDFLAGS = -L/usr/local/lib -L/usr/lib -L.
 LDLIBS = -lpthread -lcurl -ljson-c -lwebsockets
 
 .c.o:
@@ -18,6 +18,9 @@ LDLIBS = -lpthread -lcurl -ljson-c -lwebsockets
 $(PROG): $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
+lib$(PROG).so: $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o lib$(PROG).so -fPIC -shared $(SRCS) $(LDFLAGS) $(LDLIBS) 
+
 .PHONY: clean
 clean:
-	rm -rf $(PROG) $(OBJS) *.o *.core vgcore.*
+	rm -rf $(PROG) $(OBJS) *.o *.so *.core vgcore.*

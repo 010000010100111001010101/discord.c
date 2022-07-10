@@ -146,20 +146,80 @@ static bool set_message_content(discord_message *message, json_object *data){
         return false;
     }
 
-    string_copy(contentstr, message->content, sizeof(message->content));
+    return string_copy(contentstr, message->content, sizeof(message->content));
+}
+
+static bool set_message_timestamp(discord_message *message, json_object *data){
+    const char *createdts = json_object_get_string(
+        json_object_object_get(data, "timestamp")
+    );
+
+    const char *editedts = json_object_get_string(
+        json_object_object_get(data, "edited_timestamp")
+    );
+
+    string_copy(createdts, message->timestamp, sizeof(message->timestamp));
+
+    if (editedts){
+        string_copy(editedts, message->edited_timestamp, sizeof(message->edited_timestamp));
+    }
 
     return true;
 }
 
-static bool set_message_timestamp(discord_message *message, json_object *data){
-    json_object *createdobj = json_object_object_get(data, "timestamp");
-    json_object *editedobj = json_object_object_get(data, "edited_timestamp");
+static bool set_message_mentions(discord_message *message, json_object *data){
+    message->mention_everyone = json_object_get_boolean(
+        json_object_object_get(data, "mention_everyone")
+    );
 
-    /*
-     * ISO8601 format so this needs work BOOKMARK
-     */
-    message->timestamp = createdobj ? 0 : 0;
-    message->edited_timestamp = editedobj ? 0 : 0;
+    message->mentions = json_array_to_list(
+        json_object_object_get(data, "mentions")
+    );
+
+    if (!message->mentions){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_message_mentions() - json_array_to_list call failed for mentions\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    message->mention_roles = json_array_to_list(
+        json_object_object_get(data, "mention_roles")
+    );
+
+    if (!message->mention_roles){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_message_mentions() - json_array_to_list call failed for mention_roles\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    json_object *mentionchannelsobj = json_object_object_get(data, "mention_channels");
+
+    if (!mentionchannelsobj){
+        return true;
+    }
+
+    message->mention_channels = json_array_to_list(mentionchannelsobj);
+
+    if (!message->mention_channels){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_message_mentions() - json_array_to_list call failed for mention_channels\n",
+            __FILE__
+        );
+
+        return false;
+    }
 
     return true;
 }
@@ -282,10 +342,33 @@ discord_message *message_init(discord_state *state, json_object *data){
         return NULL;
     }
 
+    if (!set_message_mentions(message, data)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] message_init() - set_message_mentions call failed\n",
+            __FILE__
+        );
+
+        message_free(message);
+
+        return NULL;
+    }
+
+    /*
+    set_message_attachments
+    set_message_embeds
+    set_message_reactions
+    store channels and other objects in cache then keep id?
+    */
+
     //const char *objstr = NULL;
 
     message->tts = json_object_get_boolean(json_object_object_get(data, "tts"));
-    message->mention_everyone = json_object_get_boolean(json_object_object_get(data, "mention_everyone"));
+    message->nonce = json_object_get_int(json_object_object_get(data, "nonce"));
+    message->pinned = json_object_get_boolean(json_object_object_get(data, "pinned"));
+    message->type = json_object_get_int(json_object_object_get(data, "type"));
+    message->flags = json_object_get_int(json_object_object_get(data, "flags"));
 
     return message;
 }
@@ -350,6 +433,16 @@ void message_free(void *messageptr){
 
         return;
     }
+
+    list_free(message->mentions);
+    list_free(message->mention_roles);
+    list_free(message->mention_channels);
+    list_free(message->attachments);
+    list_free(message->embeds);
+    list_free(message->reactions);
+    list_free(message->components);
+    list_free(message->sticker_items);
+    list_free(message->stickers);
 
     member_free(message->member);
 
