@@ -405,8 +405,6 @@ bool message_delete(const discord_message *message, const char *reason){
 
     bool success = res->status == 204;
 
-    http_response_free(res);
-
     if (!success){
         log_write(
             logger,
@@ -416,6 +414,8 @@ bool message_delete(const discord_message *message, const char *reason){
             json_object_to_json_string(res->data)
         );
     }
+
+    http_response_free(res);
 
     return success;
 }

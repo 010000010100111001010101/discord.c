@@ -391,7 +391,7 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] handle_gateway_dispatch() - message_init call failed\n",
+                "[%s] handle_gateway_dispatch() - state_set_message call failed\n",
                 __FILE__
             );
 

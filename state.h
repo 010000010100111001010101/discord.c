@@ -69,12 +69,7 @@ typedef struct discord_state_options {
     discord_gateway_intents intent;
     const discord_gateway_presence *presence;
 
-    bool cache_messages;
     size_t max_messages;
-
-    bool cache_users;
-    bool cache_channels;
-    bool cache_guilds;
 } discord_state_options;
 
 typedef struct discord_state {

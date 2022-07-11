@@ -71,6 +71,8 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
                 return NULL;
             }
         }
+
+        state->max_messages = opts->max_messages;
     }
 
     state->http = http_init(state->token, NULL);
@@ -352,7 +354,7 @@ const discord_message *state_set_message(discord_state *state, json_object *data
         return NULL;
     }
 
-    if (list_get_length(state->messages) == state->max_messages){
+    if (state->max_messages && list_get_length(state->messages) == state->max_messages){
         list_remove(state->messages, 0);
     }
 
