@@ -9,6 +9,8 @@
 #define DISCORD_EMBED_MAX_URL_LENGTH 512
 #define DISCORD_EMBED_MAX_FIELDS 25
 
+#define DISCORD_EMBED_DEFAULT_COLOR 0xAAAAFF
+
 typedef struct discord_embed_footer {
     char text[2049];
     char icon_url[DISCORD_EMBED_MAX_URL_LENGTH];

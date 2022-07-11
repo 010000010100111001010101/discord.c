@@ -282,6 +282,8 @@ static bool set_embed_json_author(const discord_embed *embed, json_object *embed
         return false;
     }
 
+    json_object_object_add(authorobj, "name", obj);
+
     obj = json_object_new_string(embed->author->url);
 
     json_object_object_add(authorobj, "url", obj);
@@ -618,7 +620,7 @@ bool embed_set_color(discord_embed *embed, int color){
         return false;
     }
 
-    embed->color = color;
+    embed->color = color ? color : DISCORD_EMBED_DEFAULT_COLOR;
 
     return true;
 }
@@ -913,7 +915,7 @@ bool embed_add_field(discord_embed *embed, const char *name, const char *value, 
         }
 
         string_copy(name, field->name, sizeof(field->name));
-        string_copy(name, field->value, sizeof(field->value));
+        string_copy(value, field->value, sizeof(field->value));
 
         field->display_inline = displayinline;
 
