@@ -426,7 +426,7 @@ void message_free(void *messageptr){
     if (!message){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] message_free() - message is NULL\n",
             __FILE__
         );
@@ -449,10 +449,158 @@ void message_free(void *messageptr){
     free(message);
 }
 
-/* BOOKMARK
- * this needs to be fixed up
- * maybe separate reply?
- */
+/* message reply functions */
+
+static bool set_reply_json_content(json_object *replyobj, const char *content){
+    if (!content){
+        return true;
+    }
+
+    json_object *obj = json_object_new_string(content);
+    bool success = !json_object_object_add(replyobj, "content", obj);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_reply_json_content() - json_object_object_add call failed\n",
+            __FILE__
+        );
+    }
+
+    return success;
+}
+
+static bool set_reply_json_misc(json_object *replyobj, bool tts, int flags){
+    json_object *obj = json_object_new_boolean(tts);
+    bool success = !json_object_object_add(replyobj, "tts", obj);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_reply_json_misc() - json_object_object_add call failed for tts\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    obj = json_object_new_int(flags);
+    success = !json_object_object_add(replyobj, "flags", obj);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_reply_json_misc() - json_object_object_add call failed for flags\n",
+            __FILE__
+        );
+    }
+
+    return success;
+}
+
+static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *embed, const list *embeds){
+    json_object *embedsobj = json_object_new_array();
+
+    if (!embedsobj){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_reply_json_embeds() - embeds object initialization failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    json_object *obj = NULL;
+    bool success = false;
+
+    if (embed){
+        obj = embed_to_json(embed);
+
+        if (!obj){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - embed_to_json call failed for embed\n",
+                __FILE__
+            );
+
+            json_object_put(embedsobj);
+
+            return false;
+        }
+
+        success = !json_object_array_add(embedsobj, obj);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - json_object_array_add call failed for embed\n",
+                __FILE__
+            );
+
+            json_object_put(embedsobj);
+
+            return false;
+        }
+    }
+
+    for (size_t index = 0; index < list_get_length(embeds); ++index){
+        const discord_embed *embed = list_get_generic(embeds, index);
+        obj = embed_to_json(embed);
+
+        if (!obj){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - embed_to_json call failed\n",
+                __FILE__
+            );
+
+            json_object_put(embedsobj);
+
+            success = false;
+
+            break;
+        }
+
+        success = json_object_array_add(embedsobj, obj);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - json_object_array_add call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
+    }
+
+    if (success){
+        success = !json_object_object_add(replyobj, "embeds", embedsobj);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - json_object_object_add call failed\n",
+                __FILE__
+            );
+
+            json_object_put(embedsobj);
+        }
+    }
+
+    return success;
+}
+
 json_object *message_reply_to_json(const discord_message_reply *reply){
     if (!reply){
         log_write(
@@ -464,135 +612,49 @@ json_object *message_reply_to_json(const discord_message_reply *reply){
 
         return NULL;
     }
-    else if (!reply->content && !reply->embeds && !reply->sticker_ids){
+    else if (!reply->content && !reply->embed && !reply->embeds && !reply->sticker_ids){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] message_reply_to_json() - must set one of content, file, embeds, sticker_ids\n",
+            "[%s] message_reply_to_json() - one of content, file, embeds, sticker_ids required\n",
             __FILE__
         );
 
         return NULL;
     }
 
-    json_object *message = json_object_new_object();
+    json_object *replyobj = json_object_new_object();
 
-    if (!message){
+    if (!replyobj){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] message_reply_to_json() - message object initialization failed\n",
+            "[%s] message_reply_to_json() - reply object initialization failed\n",
             __FILE__
         );
 
         return NULL;
     }
 
-    json_object *obj = json_object_new_string(reply->content);
+    if (!set_reply_json_content(replyobj, reply->content)){
+        json_object_put(replyobj);
 
-    if (obj){
-        json_object_object_add(message, "content", obj);
+        return NULL;
     }
 
-    obj = json_object_new_boolean(reply->tts);
+    if (!set_reply_json_misc(replyobj, reply->tts, reply->flags)){
+        json_object_put(replyobj);
 
-    json_object_object_add(message, "tts", obj);
-
-    obj = list_to_json_array(reply->embeds);
-
-    if (obj){
-        json_object_object_add(message, "embeds", obj);
+        return NULL;
     }
 
-    if (reply->allowed_mentions){
-        json_object *allowedmentions = json_object_new_object();
+    if (!set_reply_json_embeds(replyobj, reply->embed, reply->embeds)){
+        json_object_put(replyobj);
 
-        if (!allowedmentions){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] message_reply_to_json() - allowed_mentions object initialization failed\n",
-                __FILE__
-            );
-
-            json_object_put(message);
-
-            return NULL;
-        }
-
-        obj = list_to_json_array(reply->allowed_mentions->parse);
-
-        if (obj){
-            json_object_object_add(allowedmentions, "parse", obj);
-        }
-
-        obj = list_to_json_array(reply->allowed_mentions->roles);
-
-        if (obj){
-            json_object_object_add(allowedmentions, "roles", obj);
-        }
-
-        obj = list_to_json_array(reply->allowed_mentions->users);
-
-        if (obj){
-            json_object_object_add(allowedmentions, "users", obj);
-        }
-
-        obj = json_object_new_boolean(reply->allowed_mentions->replied_user);
-
-        if (obj){
-            json_object_object_add(allowedmentions, "replied_user", obj);
-        }
-
-        json_object_object_add(message, "allowed_mentions", allowedmentions);
+        return NULL;
     }
 
-    /*
-    if (reply->message_reference){
-        json_object *messagereference = json_object_new_object();
+    /* support the rest */
 
-        if (!messagereference){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] message_reply_to_json() - message_reference object initialization failed\n",
-                __FILE__
-            );
-
-            json_object_put(message);
-
-            return NULL;
-        }
-
-        obj = 
-    }
-    */
-
-    obj = list_to_json_array(reply->components);
-
-    if (obj){
-        json_object_object_add(message, "components", obj);
-    }
-
-    obj = list_to_json_array(reply->sticker_ids);
-
-    if (obj){
-        json_object_object_add(message, "sticker_ids", obj);
-    }
-
-    if (reply->payload_json){
-        json_object_object_add(message, "payload_json", obj);
-    }
-
-    obj = list_to_json_array(reply->attachments);
-
-    if (obj){
-        json_object_object_add(message, "attachments", obj);
-    }
-
-    obj = json_object_new_int(reply->flags);
-
-    json_object_object_add(message, "flags", obj);
-
-    return message;
+    return replyobj;
 }

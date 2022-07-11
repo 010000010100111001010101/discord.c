@@ -551,7 +551,7 @@ void state_free(discord_state *state){
     if (!state){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] state_free() - state is NULL\n",
             __FILE__
         );

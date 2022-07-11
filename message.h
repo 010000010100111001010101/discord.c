@@ -4,7 +4,7 @@
 #include "json_utils.h"
 
 #include "channel.h"
-//#include "embed.h"
+#include "embed.h"
 #include "member.h"
 #include "snowflake.h"
 #include "state.h"
@@ -27,6 +27,7 @@ typedef struct discord_message_reply_allowed_mentions {
 typedef struct discord_message_reply {
     const char *content;
     bool tts;
+    const discord_embed *embed;
     const list *embeds;
     const discord_message_reply_allowed_mentions *allowed_mentions;
     const discord_message_reference *message_reference;

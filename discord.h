@@ -4,6 +4,7 @@
 #include "log.h"
 
 #include "channel.h"
+#include "embed.h"
 #include "gateway.h"
 #include "message.h"
 #include "snowflake.h"
@@ -17,12 +18,7 @@ typedef struct discord_options {
     const discord_gateway_presence *presence;
 
     /* passthrough state options */
-    bool cache_messages;
     size_t max_messages;
-
-    bool cache_users;
-    bool cache_channels;
-    bool cache_guilds;
 
     /* passthrough gateway options */
     bool compress;

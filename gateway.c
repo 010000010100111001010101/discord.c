@@ -1419,7 +1419,7 @@ void gateway_free(discord_gateway *gateway){
     if (!gateway){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] gateway_free() - gateway is NULL\n",
             __FILE__
         );

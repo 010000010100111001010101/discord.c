@@ -252,7 +252,7 @@ void discord_free(discord *client){
     if (!client){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] discord_free() - client is NULL\n",
             __FILE__
         );

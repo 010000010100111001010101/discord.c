@@ -286,7 +286,7 @@ map *json_to_map(json_object *json){
     while (!json_object_iter_equal(&curr, &end)){
         const char *key = json_object_iter_peek_name(&curr);
         json_object *valueobj = json_object_iter_peek_value(&curr);
-        json_type type = valueobj ? json_object_get_type(valueobj) : json_type_null;
+        json_type type = json_object_get_type(valueobj);
 
         map_item k = {0};
         k.type = M_TYPE_STRING;

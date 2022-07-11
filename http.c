@@ -1219,8 +1219,9 @@ discord_http_response *http_request(discord_http *http, http_method method, cons
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] http_request() - failed to perform request\n",
-            __FILE__
+            "[%s] http_request() - failed to perform request: %s\n",
+            __FILE__,
+            curl_easy_strerror(err)
         );
 
         map_free(responseheaders);
@@ -2334,7 +2335,7 @@ void http_response_free(discord_http_response *response){
     if (!response){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] http_response_free() - response is NULL\n",
             __FILE__
         );
@@ -2351,7 +2352,7 @@ void http_free(discord_http *http){
     if (!http){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] http_free() - http is NULL\n",
             __FILE__
         );

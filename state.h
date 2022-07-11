@@ -5,6 +5,7 @@
 #include "map.h"
 
 typedef struct discord_channel discord_channel;
+typedef struct discord_embed discord_embed;
 typedef struct discord_http discord_http;
 typedef struct discord_member discord_member;
 typedef struct discord_message discord_message;

@@ -53,7 +53,7 @@ void member_free(void *memberptr){
     if (!member){
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] member_free() - member is NULL\n",
             __FILE__
         );
