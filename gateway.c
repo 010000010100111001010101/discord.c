@@ -385,7 +385,7 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
         gateway->resume = false;
     }
     else if (!strcmp(name, "MESSAGE_CREATE") || !strcmp(name, "MESSAGE_UPDATE")){
-        discord_message *message = message_init(gateway->state, data);
+        const discord_message *message = state_set_message(gateway->state, data);
 
         if (!message){
             log_write(
@@ -398,11 +398,7 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
             return false;
         }
 
-        bool success = event(gateway->state->event_context, message);
-
-        message_free(message);
-
-        return success;
+        return event(gateway->state->event_context, message);
     }
 
     log_write(
@@ -621,21 +617,11 @@ static bool handle_gateway_writable(discord_gateway *gateway, struct lws *wsi){
         return true;
     }
 
-    size_t datasize = 0;
-    unsigned char *data = NULL;
+    list_item payload = {0};
 
-    list_pop(gateway->queue, 0, NULL, &datasize, (void *)&data);
+    list_pop(gateway->queue, 0, &payload);
 
-    if (!data){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] handle_gateway_writable() - failed to get payload data from queue\n",
-            __FILE__
-        );
-
-        return false;
-    }
+    unsigned char *data = payload.data;
 
     size_t datalen = strlen((char *)(data + LWS_PRE));
     int ret = lws_write(wsi, data + LWS_PRE, datalen, LWS_WRITE_TEXT);
@@ -1399,12 +1385,12 @@ bool gateway_send(discord_gateway *gateway, discord_gateway_opcodes op, json_obj
 
     string_copy(payloadstr, payload + LWS_PRE, payloadsize);
 
-    bool success = list_append_pointer(
-        gateway->queue,
-        L_TYPE_STRING,
-        payloadsize,
-        payload
-    );
+    list_item item = {0};
+    item.type = L_TYPE_STRING;
+    item.size = payloadsize;
+    item.data = payload;
+
+    bool success = list_append(gateway->queue, &item);
 
     json_object_put(payloadobj);
 

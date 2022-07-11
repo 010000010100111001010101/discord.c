@@ -44,7 +44,7 @@ static bool set_user_name(discord_user *user, json_object *data){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] set_user_name() - failed to get username from data object\n",
+            "[%s] set_user_name() - failed to get username from data\n",
             __FILE__
         );
 

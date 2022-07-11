@@ -7,8 +7,6 @@
 
 #include <json-c/json.h>
 
-typedef struct discord_state discord_state;
-
 typedef struct discord_user_connection {
     char id[64];
     char name[64];

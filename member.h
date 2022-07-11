@@ -3,6 +3,7 @@
 
 //#include "roles.h"
 #include "state.h"
+#include "user.h"
 
 #include <json-c/json.h>
 

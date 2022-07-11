@@ -4,7 +4,16 @@
 #include "log.h"
 #include "map.h"
 
+typedef struct discord_channel discord_channel;
+typedef struct discord_http discord_http;
+typedef struct discord_member discord_member;
+typedef struct discord_message discord_message;
+typedef struct discord_state discord_state;
+typedef struct discord_user discord_user;
+
+#include "channel.h"
 #include "http.h"
+#include "message.h"
 #include "user.h"
 
 #include <json-c/json.h>
@@ -25,9 +34,6 @@
 #define DISCORD_GATEWAY_RATE_LIMIT_INTERVAL 60
 #define DISCORD_GATEWAY_RATE_LIMIT_COUNT 110
 #define DISCORD_GATEWAY_LWS_LOG_LEVEL (LLL_ERR | LLL_WARN | LLL_INFO | LLL_DEBUG)
-
-typedef struct discord_http discord_http;
-typedef struct discord_user discord_user;
 
 typedef enum discord_gateway_intents {
     INTENT_GUILDS = 1,
@@ -62,6 +68,13 @@ typedef struct discord_state_options {
     const logctx *log;
     discord_gateway_intents intent;
     const discord_gateway_presence *presence;
+
+    bool cache_messages;
+    size_t max_messages;
+
+    bool cache_users;
+    bool cache_channels;
+    bool cache_guilds;
 } discord_state_options;
 
 typedef struct discord_state {
@@ -76,10 +89,10 @@ typedef struct discord_state {
     discord_user *user;
     discord_http *http;
 
+    list *messages;
+    size_t max_messages;
+
     map *users;
-    map *channels;
-    map *guilds;
-    map *messages;
 } discord_state;
 
 discord_state *state_init(const char *, const discord_state_options *);
@@ -87,6 +100,9 @@ discord_state *state_init(const char *, const discord_state_options *);
 json_object *state_get_gateway_presence(discord_state *);
 const char *state_get_gateway_presence_string(discord_state *);
 bool state_set_gateway_presence(discord_state *, const time_t *, const list *, const char *, const bool *);
+
+const discord_message *state_set_message(discord_state *, json_object *);
+const discord_message *state_get_message(discord_state *, snowflake);
 
 const discord_user *state_set_user(discord_state *, json_object *);
 const discord_user *state_get_user(discord_state *, snowflake);

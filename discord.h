@@ -16,6 +16,14 @@ typedef struct discord_options {
     discord_gateway_intents intent;
     const discord_gateway_presence *presence;
 
+    /* passthrough state options */
+    bool cache_messages;
+    size_t max_messages;
+
+    bool cache_users;
+    bool cache_channels;
+    bool cache_guilds;
+
     /* passthrough gateway options */
     bool compress;
     int large_threshold;

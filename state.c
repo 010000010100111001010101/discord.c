@@ -88,58 +88,28 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         return NULL;
     }
 
+    state->messages = list_init();
+
+    if (!state->messages){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_init() - messages list initialization failed\n",
+            __FILE__
+        );
+
+        state_free(state);
+
+        return NULL;
+    }
+
     state->users = map_init();
 
     if (!state->users){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_init() - users cache map initialization failed\n",
-            __FILE__
-        );
-
-        state_free(state);
-
-        return NULL;
-    }
-
-    state->channels = map_init();
-
-    if (!state->channels){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] state_init() - channels cache map initialization failed\n",
-            __FILE__
-        );
-
-        state_free(state);
-
-        return NULL;
-    }
-
-    state->guilds = map_init();
-
-    if (!state->guilds){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] state_init() - guilds cache map initialization failed\n",
-            __FILE__
-        );
-
-        state_free(state);
-
-        return NULL;
-    }
-
-    state->messages = map_init();
-
-    if (!state->messages){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] state_init() - messages cache map initialization failed\n",
+            "[%s] state_init() - users map initialization failed\n",
             __FILE__
         );
 
@@ -310,12 +280,12 @@ bool state_set_gateway_presence(discord_state *state, const time_t *since, const
     return true;
 }
 
-const discord_user *state_set_user(discord_state *state, json_object *data){
+const discord_message *state_set_message(discord_state *state, json_object *data){
     if (!state){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_user() - state is NULL\n",
+            "[%s] state_set_message() - state is NULL\n",
             __FILE__
         );
 
@@ -325,7 +295,7 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_user() - data is NULL\n",
+            "[%s] state_set_message() - data is NULL\n",
             __FILE__
         );
 
@@ -340,8 +310,9 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_user() - failed to get id from user object\n",
-            __FILE__
+            "[%s] state_set_message() - failed to get id from data: %s\n",
+            __FILE__,
+            json_object_to_json_string(data)
         );
 
         return NULL;
@@ -354,8 +325,146 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_user() - snowflake_from_string call failed\n",
+            "[%s] state_set_message() - snowflake_from_string call failed for id: %s\n",
+            __FILE__,
+            idstr
+        );
+
+        return NULL;
+    }
+
+    const discord_message *cached = state_get_message(state, id);
+
+    if (cached){
+        return cached;
+    }
+
+    discord_message *message = message_init(state, data);
+
+    if (!message){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_message() - message_init call failed\n",
             __FILE__
+        );
+
+        return NULL;
+    }
+
+    if (list_get_length(state->messages) == state->max_messages){
+        list_remove(state->messages, 0);
+    }
+
+    list_item item = {0};
+    item.type = L_TYPE_GENERIC;
+    item.size = sizeof(*message);
+    item.data = message;
+    item.generic_free = message_free;
+
+    if (!list_append(state->messages, &item)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_message() - list_append call failed\n",
+            __FILE__
+        );
+
+        message_free(message);
+
+        return NULL;
+    }
+
+    return message;
+}
+
+const discord_message *state_get_message(discord_state *state, snowflake id){
+    if (!state){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_get_message() - state is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    const discord_message *message = NULL;
+
+    size_t messageslen = list_get_length(state->messages);
+
+    for (size_t index = 0; index < messageslen; ++index){
+        const discord_message *tmp = list_get_generic(state->messages, index);
+
+        if (tmp->id == id){
+            message = tmp;
+
+            break;
+        }
+    }
+
+    if (!message){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] state_get_cache() - message %" PRIu64 " not found in cache\n",
+            __FILE__,
+            id
+        );
+    }
+
+    return message;
+}
+
+const discord_user *state_set_user(discord_state *state, json_object *data){
+    if (!state){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_cache() - state is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+    else if (!data){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_cache() - data is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    const char *idstr = json_object_get_string(
+        json_object_object_get(data, "id")
+    );
+
+    if (!idstr){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_user() - failed to get id from data: %s\n",
+            __FILE__,
+            json_object_to_json_string(data)
+        );
+
+        return NULL;
+    }
+
+    snowflake id = 0;
+    bool success = snowflake_from_string(idstr, &id);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_user() - snowflake_from_string call failed for id: %s\n",
+            __FILE__,
+            idstr
         );
 
         return NULL;
@@ -377,7 +486,7 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
             __FILE__
         );
 
-        return NULL;
+        return false;
     }
 
     map_item k = {0};
@@ -387,17 +496,15 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
 
     map_item v = {0};
     v.type = M_TYPE_GENERIC;
-    v.size = sizeof(*user);
+    v.size = sizeof(user);
     v.data = user;
     v.generic_free = user_free;
 
-    success = map_set(state->users, &k, &v);
-
-    if (!success){
+    if (!map_set(state->users, &k, &v)){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] user_init() - map_set call for user cache failed\n",
+            "[%s] state_set_cache() - map_set call for cache failed\n",
             __FILE__
         );
 
@@ -427,7 +534,7 @@ const discord_user *state_get_user(discord_state *state, snowflake id){
         log_write(
             logger,
             LOG_DEBUG,
-            "[%s] state_get_user() - %" PRIu64 " not found in users map\n",
+            "[%s] state_get_cache() - user %" PRIu64 " not found in cache\n",
             __FILE__,
             id
         );
@@ -450,10 +557,8 @@ void state_free(discord_state *state){
         return;
     }
 
+    list_free(state->messages);
     map_free(state->users);
-    map_free(state->channels);
-    map_free(state->guilds);
-    map_free(state->messages);
 
     http_free(state->http);
 
