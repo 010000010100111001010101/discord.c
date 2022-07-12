@@ -10,7 +10,7 @@
 static logctx *logger = NULL;
 
 list *json_array_to_list(json_object *value){
-    if (json_object_get_type(value) != json_type_array){
+    if (!value || json_object_get_type(value) != json_type_array){
         log_write(
             logger,
             LOG_WARNING,
@@ -21,7 +21,6 @@ list *json_array_to_list(json_object *value){
         return NULL;
     }
 
-    size_t length = json_object_array_length(value);
     list *l = list_init();
 
     if (!l){
@@ -36,26 +35,14 @@ list *json_array_to_list(json_object *value){
     }
 
     bool success = true;
+    size_t length = json_object_array_length(value);
 
     for (size_t index = 0; index < length; ++index){
         json_object *itemobj = json_object_array_get_idx(value, index);
-
-        if (!itemobj){
-            log_write(
-                logger,
-                LOG_WARNING,
-                "[%s] json_array_to_list() - array item is NULL\n",
-                __FILE__
-            );
-
-            continue;
-        }
-
         json_type type = json_object_get_type(itemobj);
 
         list_item item = {0};
 
-        /* this one calls recursively... any better way? */
         if (type == json_type_array){
             list *tmp = json_array_to_list(itemobj);
 
@@ -97,6 +84,11 @@ list *json_array_to_list(json_object *value){
             item.size = sizeof(tmp);
             item.data_copy = &tmp;
         }
+        else if (type == json_type_null){
+            item.type = L_TYPE_NULL;
+            item.size = 0;
+            item.data = NULL;
+        }
         else if (type == json_type_object){
             map *tmp = json_to_map(itemobj);
 
@@ -104,7 +96,7 @@ list *json_array_to_list(json_object *value){
                 log_write(
                     logger,
                     LOG_ERROR,
-                    "[%s] json_array_to_list() - conversion to map failed\n",
+                    "[%s] json_array_to_list() - json_to_map call failed\n",
                     __FILE__
                 );
 
@@ -127,15 +119,29 @@ list *json_array_to_list(json_object *value){
         else {
             log_write(
                 logger,
-                LOG_ERROR,
-                "[%s] json_array_to_list() - unexpected object type\n",
-                __FILE__
+                LOG_WARNING,
+                "[%s] json_array_to_list() - unexpected json type %d\n",
+                __FILE__,
+                type
             );
+
+            success = false;
 
             break;
         }
 
         success = list_append(l, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] json_array_to_list() - list_append call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
     }
 
     if (!success){
@@ -230,7 +236,7 @@ json_object *list_to_json_array(const list *l){
             log_write(
                 logger,
                 LOG_WARNING,
-                "[%s] list_to_json_array() - unexpected object type at index %ld\n",
+                "[%s] list_to_json_array() - unexpected list type at index %ld\n",
                 __FILE__,
                 index
             );
@@ -273,7 +279,7 @@ map *json_to_map(json_object *json){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] json_to_map() - map alloc failed\n",
+            "[%s] json_to_map() - map initialization failed\n",
             __FILE__
         );
 
@@ -361,7 +367,7 @@ map *json_to_map(json_object *json){
                 log_write(
                     logger,
                     LOG_ERROR,
-                    "[%s] json_to_map() - json_to_map recursive call failed\n",
+                    "[%s] json_to_map() - recursive call failed\n",
                     __FILE__
                 );
 
@@ -436,7 +442,7 @@ json_object *map_to_json(const map *m){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] map_to_json() - alloc for json object failed\n",
+            "[%s] map_to_json() - json object initialization failed\n",
             __FILE__
         );
 

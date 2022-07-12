@@ -620,7 +620,7 @@ bool embed_set_color(discord_embed *embed, int color){
         return false;
     }
 
-    embed->color = color ? color : DISCORD_EMBED_DEFAULT_COLOR;
+    embed->color = color;
 
     return true;
 }

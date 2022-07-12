@@ -502,6 +502,10 @@ static bool set_reply_json_misc(json_object *replyobj, bool tts, int flags){
 }
 
 static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *embed, const list *embeds){
+    if (!embed && !embed){
+        return true;
+    }
+
     json_object *embedsobj = json_object_new_array();
 
     if (!embedsobj){
