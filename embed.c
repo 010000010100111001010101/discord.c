@@ -4,6 +4,7 @@
 
 static const logctx *logger = NULL;
 
+/* embed json constructors */
 static bool set_embed_json_footer(const discord_embed *embed, json_object *embedobj){
     if (!embed->footer){
         return true;
@@ -381,11 +382,317 @@ static bool set_embed_json_fields(const discord_embed *embed, json_object *embed
     return true;
 }
 
-discord_embed *embed_init(discord_state *state){
+/* embed constructors */
+static bool construct_embed(discord_embed *embed, json_object *data){
+    bool success = true;
+
+    struct json_object_iterator curr = json_object_iter_begin(data);
+    struct json_object_iterator end = json_object_iter_end(data);
+
+    while (!json_object_iter_equal(&curr, &end)){
+        const char *key = json_object_iter_peek_name(&curr);
+        json_object *valueobj = json_object_iter_peek_value(&curr);
+        json_type type = json_object_get_type(valueobj);
+
+        bool skip = false;
+
+        if (!valueobj || type == json_type_null){
+            skip = true;
+        }
+        else if (type == json_type_array){
+            skip = !json_object_array_length(valueobj);
+        }
+
+        if (skip){
+            json_object_iter_next(&curr);
+
+            continue;
+        }
+
+        if (!strcmp(key, "title")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = string_copy(
+                objstr,
+                embed->title,
+                sizeof(embed->title)
+            );
+        }
+        else if (!strcmp(key, "description")){
+            if (embed->description){
+                free(embed->description);
+
+                embed->description = NULL;
+            }
+
+            const char *objstr = json_object_get_string(valueobj);
+            embed->description = string_duplicate(objstr);
+
+            success = embed->description;
+        }
+        else if (!strcmp(key, "url")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = string_copy(
+                objstr,
+                embed->url,
+                sizeof(embed->url)
+            );
+        }
+        else if (!strcmp(key, "timestamp")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = string_copy(
+                objstr,
+                embed->timestamp,
+                sizeof(embed->timestamp)
+            );
+        }
+        else if (!strcmp(key, "color")){
+            embed->color = json_object_get_int(valueobj);
+        }
+        else if (!strcmp(key, "footer")){
+            json_object *textobj = json_object_object_get(valueobj, "text");
+            json_object *iconurlobj = json_object_object_get(valueobj, "icon_url");
+
+            success = embed_set_footer(
+                embed,
+                json_object_get_string(textobj),
+                json_object_get_string(iconurlobj)
+            );
+        }
+        else if (!strcmp(key, "image")){
+            json_object *urlobj = json_object_object_get(valueobj, "url");
+            json_object *heightobj = json_object_object_get(valueobj, "height");
+            json_object *widthobj = json_object_object_get(valueobj, "width");
+
+            success = embed_set_image(
+                embed,
+                json_object_get_string(urlobj),
+                json_object_get_int(heightobj),
+                json_object_get_int(widthobj)
+            );
+        }
+        else if (!strcmp(key, "thumbnail")){
+            json_object *urlobj = json_object_object_get(valueobj, "url");
+            json_object *heightobj = json_object_object_get(valueobj, "height");
+            json_object *widthobj = json_object_object_get(valueobj, "width");
+
+            success = embed_set_thumbnail(
+                embed,
+                json_object_get_string(urlobj),
+                json_object_get_int(heightobj),
+                json_object_get_int(widthobj)
+            );
+        }
+        else if (!strcmp(key, "video")){
+            json_object *urlobj = json_object_object_get(valueobj, "url");
+            json_object *heightobj = json_object_object_get(valueobj, "height");
+            json_object *widthobj = json_object_object_get(valueobj, "width");
+
+            success = embed_set_video(
+                embed,
+                json_object_get_string(urlobj),
+                json_object_get_int(heightobj),
+                json_object_get_int(widthobj)
+            );
+        }
+        else if (!strcmp(key, "provider")){
+            json_object *nameobj = json_object_object_get(valueobj, "name");
+            json_object *urlobj = json_object_object_get(valueobj, "url");
+
+            success = embed_set_provider(
+                embed,
+                json_object_get_string(nameobj),
+                json_object_get_string(urlobj)
+            );
+        }
+        else if (!strcmp(key, "author")){
+            json_object *nameobj = json_object_object_get(valueobj, "name");
+            json_object *urlobj = json_object_object_get(valueobj, "url");
+            json_object *iconurlobj = json_object_object_get(valueobj, "icon_url");
+
+            success = embed_set_author(
+                embed,
+                json_object_get_string(nameobj),
+                json_object_get_string(urlobj),
+                json_object_get_string(iconurlobj)
+            );
+        }
+        else if (!strcmp(key, "fields")){
+            for (size_t index = 0; index < json_object_array_length(valueobj); ++index){
+                json_object *fieldobj = json_object_array_get_idx(valueobj, index);
+
+                json_object *nameobj = json_object_object_get(fieldobj, "name");
+                json_object *valueobj = json_object_object_get(fieldobj, "value");
+                json_object *inlineobj = json_object_object_get(fieldobj, "inline");
+
+                success = embed_add_field(
+                    embed,
+                    json_object_get_string(nameobj),
+                    json_object_get_string(valueobj),
+                    json_object_get_boolean(inlineobj)
+                );
+
+                if (!success){
+                    log_write(
+                        logger,
+                        LOG_ERROR,
+                        "[%s] construct_embed() - embed_add_field call failed\n",
+                        __FILE__
+                    );
+
+                    break;
+                }
+            }
+
+            if (!success){
+                break;
+            }
+        }
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_embed() - failed to set %s with value: %s\n",
+                __FILE__,
+                key,
+                json_object_to_json_string(valueobj)
+            );
+
+            break;
+        }
+
+        json_object_iter_next(&curr);
+    }
+
+    return success;
+}
+
+list *embed_list_from_json_array(discord_state *state, json_object *data){
     if (!state){
         log_write(
             logger,
+            LOG_WARNING,
+            "[%s] embed_list_from_json_array() - state is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+    else if (!data){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] embed_list_from_json_array() - data is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    json_type type = json_object_get_type(data);
+    size_t length = json_object_array_length(data);
+
+    if (type != json_type_array){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] embed_list_from_json_array() - data is type %d -- not a json array\n",
+            __FILE__,
+            type
+        );
+
+        return NULL;
+    }
+    else if (!length){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] embed_list_from_json_array() - json array is empty\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    list *embeds = list_init();
+
+    if (!embeds){
+        log_write(
+            logger,
             LOG_ERROR,
+            "[%s] embed_list_from_json_array() - embeds initialization failed\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *valueobj = json_object_array_get_idx(data, index);
+        type = json_object_get_type(valueobj);
+
+        if (type != json_type_object){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] embed_list_from_json_array() - object (type: %d) is not a json object: %s\n",
+                __FILE__,
+                type,
+                json_object_to_json_string(valueobj)
+            );
+
+            list_free(embeds);
+
+            return NULL;
+        }
+
+        discord_embed *embed = embed_init(state, valueobj);
+
+        if (!embed){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] embed_list_from_json_array() - embed initialization failed\n",
+                __FILE__
+            );
+
+            list_free(embeds);
+
+            return NULL;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_GENERIC;
+        item.size = sizeof(*embed);
+        item.data = embed;
+        item.generic_free = embed_free;
+
+        if (!list_append(embeds, &item)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] embed_list_from_json_array() - list_append call failed\n",
+                __FILE__
+            );
+
+            embed_free(embed);
+            list_free(embeds);
+
+            return NULL;
+        }
+    }
+
+    return embeds;
+}
+
+discord_embed *embed_init(discord_state *state, json_object *data){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
             "[%s] embed_init() - state is NULL\n",
             __FILE__
         );
@@ -410,6 +717,21 @@ discord_embed *embed_init(discord_state *state){
 
     embed->state = state;
 
+    if (data){
+        if (!construct_embed(embed, data)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] embed_init() - construct_embed call failed\n",
+                __FILE__
+            );
+
+            embed_free(embed);
+
+            return NULL;
+        }
+    }
+
     return embed;
 }
 
@@ -425,9 +747,7 @@ size_t embed_get_length(const discord_embed *embed){
         return 0;
     }
 
-    size_t length = 0;
-
-    length += strlen(embed->title) + strlen(embed->description);
+    size_t length = strlen(embed->title) + strlen(embed->description);
 
     if (embed->footer){
         length += strlen(embed->footer->text);
@@ -479,11 +799,13 @@ json_object *embed_to_json(const discord_embed *embed){
         json_object_new_string(embed->title)
     );
 
-    json_object_object_add(
-        embedobj,
-        "description",
-        json_object_new_string(embed->description)
-    );
+    if (embed->description){
+        json_object_object_add(
+            embedobj,
+            "description",
+            json_object_new_string(embed->description)
+        );
+    }
 
     json_object_object_add(
         embedobj,
@@ -667,7 +989,7 @@ bool embed_set_footer(discord_embed *embed, const char *text, const char *iconur
     return true;
 }
 
-bool embed_set_image(discord_embed *embed, const char *url){
+bool embed_set_image(discord_embed *embed, const char *url, int height, int width){
     if (!embed){
         log_write(
             logger,
@@ -696,6 +1018,9 @@ bool embed_set_image(discord_embed *embed, const char *url){
         }
 
         string_copy(url, image->url, sizeof(image->url));
+
+        image->height = height;
+        image->width = width;
     }
 
     embed->image = image;
@@ -703,7 +1028,7 @@ bool embed_set_image(discord_embed *embed, const char *url){
     return true;
 }
 
-bool embed_set_thumbnail(discord_embed *embed, const char *url){
+bool embed_set_thumbnail(discord_embed *embed, const char *url, int height, int width){
     if (!embed){
         log_write(
             logger,
@@ -732,6 +1057,9 @@ bool embed_set_thumbnail(discord_embed *embed, const char *url){
         }
 
         string_copy(url, thumbnail->url, sizeof(thumbnail->url));
+
+        thumbnail->height = height;
+        thumbnail->width = width;
     }
 
     embed->thumbnail = thumbnail;
@@ -739,7 +1067,7 @@ bool embed_set_thumbnail(discord_embed *embed, const char *url){
     return true;
 }
 
-bool embed_set_video(discord_embed *embed, const char *url){
+bool embed_set_video(discord_embed *embed, const char *url, int height, int width){
     if (!embed){
         log_write(
             logger,
@@ -768,6 +1096,9 @@ bool embed_set_video(discord_embed *embed, const char *url){
         }
 
         string_copy(url, video->url, sizeof(video->url));
+
+        video->height = height;
+        video->width = width;
     }
 
     embed->video = video;
@@ -821,7 +1152,7 @@ bool embed_set_author(discord_embed *embed, const char *name, const char *url, c
     if (!embed){
         log_write(
             logger,
-            LOG_ERROR,
+            LOG_WARNING,
             "[%s] embed_set_author() - embed is NULL\n",
             __FILE__
         );
@@ -838,7 +1169,7 @@ bool embed_set_author(discord_embed *embed, const char *name, const char *url, c
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] embed_set_author() - author object alloc failed\n",
+                "[%s] embed_set_author() - author alloc failed\n",
                 __FILE__
             );
 
@@ -858,7 +1189,7 @@ bool embed_set_author(discord_embed *embed, const char *name, const char *url, c
     else if (url || iconurl){
         log_write(
             logger,
-            LOG_ERROR,
+            LOG_WARNING,
             "[%s] embed_set_author() - name argument is required\n",
             __FILE__
         );
@@ -951,6 +1282,33 @@ bool embed_add_field(discord_embed *embed, const char *name, const char *value, 
     return true;
 }
 
+bool embed_remove_field(discord_embed *embed, size_t pos){
+    if (!embed){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] embed_remove_field() - embed is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+    else if (pos >= list_get_length(embed->fields)){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] embed_remove_field() - position is out of bounds\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    list_remove(embed->fields, pos);
+
+    return true;
+}
+
 void embed_free(void *embedptr){
     discord_embed *embed = embedptr;
 
@@ -973,5 +1331,6 @@ void embed_free(void *embedptr){
     free(embed->author);
     list_free(embed->fields);
 
+    free(embed->description);
     free(embed);
 }

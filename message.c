@@ -5,230 +5,303 @@
 
 static const logctx *logger;
 
-static bool set_message_id(discord_message *message, json_object *data){
-    const char *objstr = json_object_get_string(
-        json_object_object_get(data, "id")
-    );
+static bool construct_message_activity(discord_message *message, json_object *data){
+    message->activity = calloc(1, sizeof(*message->activity));
 
-    if (!objstr){
+    if (!message->activity){
         log_write(
             logger,
-            LOG_WARNING,
-            "[%s] set_message_id() - failed to get id from data object\n",
+            LOG_ERROR,
+            "[%s] construct_message_activity() - activity alloc failed\n",
             __FILE__
         );
 
         return false;
     }
 
-    bool success = snowflake_from_string(objstr, &message->id);
+    json_object *obj = json_object_object_get(data, "type");
 
-    if (!success){
+    message->activity->type = json_object_get_int(obj);
+
+    obj = json_object_object_get(data, "party_id");
+
+    if (obj){
+        const char *objstr = json_object_get_string(obj);
+        message->activity->party_id = string_duplicate(objstr);
+
+        if (!message->activity->party_id){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_activity() - string_duplicate call failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool construct_message_reference(discord_message *message, json_object *data){
+    message->reference = calloc(1, sizeof(*message->reference));
+
+    if (!message->reference){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] set_message_id() - snowflake_from_string call failed\n",
+            "[%s] construct_message_reference() - reference alloc failed\n",
             __FILE__
         );
+
+        return false;
+    }
+
+    bool success = true;
+
+    json_object *obj = json_object_object_get(data, "message_id");
+
+    if (obj){
+        const char *objstr = json_object_get_string(obj);
+
+        success = snowflake_from_string(objstr, &message->reference->message_id);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    obj = json_object_object_get(data, "channel_id");
+
+    if (obj){
+        const char *objstr = json_object_get_string(obj);
+
+        success = snowflake_from_string(objstr, &message->reference->channel_id);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    obj = json_object_object_get(data, "guild_id");
+
+    if (obj){
+        const char *objstr = json_object_get_string(obj);
+
+        success = snowflake_from_string(objstr, &message->reference->guild_id);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    obj = json_object_object_get(data, "fail_if_not_exists");
+
+    if (obj){
+        message->reference->fail_if_not_exists = json_object_get_boolean(obj);
     }
 
     return success;
 }
 
-static bool set_message_channel_id(discord_message *message, json_object *data){
-    const char *objstr = json_object_get_string(
-        json_object_object_get(data, "channel_id")
-    );
+static bool construct_message(discord_message *message, json_object *data){
+    bool success = true;
 
-    if (!objstr){
-        log_write(
-            logger,
-            LOG_WARNING,
-            "[%s] set_message_channel_id() - failed to get channel_id from data object\n",
-            __FILE__
-        );
+    struct json_object_iterator curr = json_object_iter_begin(data);
+    struct json_object_iterator end = json_object_iter_end(data);
 
-        return false;
-    }
+    while (!json_object_iter_equal(&curr, &end)){
+        const char *key = json_object_iter_peek_name(&curr);
+        json_object *valueobj = json_object_iter_peek_value(&curr);
+        json_type type = json_object_get_type(valueobj);
 
-    bool success = snowflake_from_string(objstr, &message->channel_id);
+        bool skip = false;
 
-    if (!success){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_channel_id() - snowflake_from_string call failed\n",
-            __FILE__
-        );
+        if (!valueobj || type == json_type_null){
+            skip = true;
+        }
+        else if (type == json_type_array){
+            skip = !json_object_array_length(valueobj);
+        }
+
+        if (skip){
+            json_object_iter_next(&curr);
+
+            continue;
+        }
+
+        if (!strcmp(key, "id")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = snowflake_from_string(objstr, &message->id);
+        }
+        else if (!strcmp(key, "channel_id")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = snowflake_from_string(objstr, &message->channel_id);
+        }
+        else if (!strcmp(key, "guild_id")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = snowflake_from_string(objstr, &message->guild_id);
+        }
+        else if (!strcmp(key, "author")){
+            message->author = state_set_user(message->state, valueobj);
+
+            success = message->author;
+        }
+        else if (!strcmp(key, "member")){
+            //message->member = state_set_member or rely on message member data? --- BOOKMARK ---
+        }
+        else if (!strcmp(key, "content")){
+            if (message->content){
+                free(message->content);
+
+                message->content = NULL;
+            }
+
+            const char *objstr = json_object_get_string(valueobj);
+            message->content = string_duplicate(objstr);
+
+            success = message->content;
+        }
+        else if (!strcmp(key, "timestamp")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            // i'd like to convert this to a time object --- BOOKMARK ---
+            success = string_copy(
+                objstr,
+                message->timestamp,
+                sizeof(message->timestamp)
+            );
+        }
+        else if (!strcmp(key, "edited_timestamp")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            // same as above
+            success = string_copy(
+                objstr,
+                message->edited_timestamp,
+                sizeof(message->edited_timestamp)
+            );
+        }
+        else if (!strcmp(key, "tts")){
+            message->tts = json_object_get_boolean(valueobj);
+        }
+        else if (!strcmp(key, "mention_everyone")){
+            message->mention_everyone = json_object_get_boolean(valueobj);
+        }
+        else if (!strcmp(key, "mentions")){
+            // setup mention.c
+        }
+        else if (!strcmp(key, "mention_roles")){
+            // setup mention.c
+        }
+        else if (!strcmp(key, "mention_channels")){
+            // setup mention.c
+        }
+        else if (!strcmp(key, "attachments")){
+            // setup attachment.c ???
+        }
+        else if (!strcmp(key, "embeds")){
+            message->embeds = embed_list_from_json_array(message->state, valueobj);
+
+            success = message->embeds;
+        }
+        else if (!strcmp(key, "reactions")){
+            // setup reaction.c ???
+        }
+        else if (!strcmp(key, "nonce")){
+            message->nonce = json_object_get_int(valueobj);
+        }
+        else if (!strcmp(key, "pinned")){
+            message->pinned = json_object_get_boolean(valueobj);
+        }
+        else if (!strcmp(key, "webhook_id")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = snowflake_from_string(objstr, &message->webhook_id);
+        }
+        else if (!strcmp(key, "type")){
+            message->type = json_object_get_int(valueobj);
+        }
+        else if (!strcmp(key, "activity")){
+            if (message->activity){
+                free(message->activity->party_id);
+                free(message->activity);
+
+                message->activity = NULL;
+            }
+
+            success = construct_message_activity(message, valueobj);
+        }
+        else if (!strcmp(key, "application")){
+            // implement application.c
+        }
+        else if (!strcmp(key, "application_id")){
+            const char *objstr = json_object_get_string(valueobj);
+
+            success = snowflake_from_string(objstr, &message->application_id);
+        }
+        else if (!strcmp(key, "message_reference")){
+            if (message->reference){
+                free(message->reference);
+
+                message->reference = NULL;
+            }
+
+            success = construct_message_reference(message, valueobj);
+        }
+        else if (!strcmp(key, "flags")){
+            message->flags = json_object_get_int(valueobj);
+        }
+        else if (!strcmp(key, "referenced_message")){
+            message->referenced_message = state_set_message(
+                message->state,
+                valueobj,
+                false
+            );
+
+            success = message->referenced_message;
+        }
+        else if (!strcmp(key, "interaction")){
+            // interaction.c ???
+        }
+        else if (!strcmp(key, "thread")){
+            // state_set_channel(message->state, data, false); --- BOOKMARK ---
+        }
+        else if (!strcmp(key, "components")){
+            // component.c ???
+        }
+        else if (!strcmp(key, "sticker_items")){
+            // sticker.c
+        }
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message() - failed to set %s with value: %s\n",
+                __FILE__,
+                key,
+                json_object_to_json_string(valueobj)
+            );
+
+            break;
+        }
+
+        json_object_iter_next(&curr);
     }
 
     return success;
-}
-
-static bool set_message_author(discord_message *message, json_object *data){
-    json_object *authorobj = json_object_object_get(data, "author");
-    message->author = state_set_user(message->state, authorobj);
-
-    if (!message->author){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_author() - state_set_user call failed\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    return true;
-}
-
-static bool set_message_guild_data(discord_message *message, json_object *data){
-    json_object *guildidobj = json_object_object_get(data, "guild_id");
-    json_object *memberobj = json_object_object_get(data, "member");
-
-    if (!guildidobj && !memberobj){
-        log_write(
-            logger,
-            LOG_DEBUG,
-            "[%s] set_message_guild_data() - no guild information to set\n",
-            __FILE__
-        );
-
-        return true;
-    }
-
-    bool success = snowflake_from_string(
-        json_object_get_string(guildidobj),
-        &message->guild_id
-    );
-
-    if (!success){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_guild_data() - snowflake_from_string call for guild_id failed\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    message->member = member_init(message->state, data);
-
-    if (!message->member){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_guild_data() - member_init call failed\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    return true;
-}
-
-static bool set_message_content(discord_message *message, json_object *data){
-    const char *contentstr = json_object_get_string(
-        json_object_object_get(data, "content")
-    );
-
-    if (!contentstr){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_content() - failed to get content object from data\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    return string_copy(contentstr, message->content, sizeof(message->content));
-}
-
-static bool set_message_timestamp(discord_message *message, json_object *data){
-    const char *createdts = json_object_get_string(
-        json_object_object_get(data, "timestamp")
-    );
-
-    const char *editedts = json_object_get_string(
-        json_object_object_get(data, "edited_timestamp")
-    );
-
-    string_copy(createdts, message->timestamp, sizeof(message->timestamp));
-
-    if (editedts){
-        string_copy(editedts, message->edited_timestamp, sizeof(message->edited_timestamp));
-    }
-
-    return true;
-}
-
-static bool set_message_mentions(discord_message *message, json_object *data){
-    message->mention_everyone = json_object_get_boolean(
-        json_object_object_get(data, "mention_everyone")
-    );
-
-    message->mentions = json_array_to_list(
-        json_object_object_get(data, "mentions")
-    );
-
-    if (!message->mentions){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_mentions() - json_array_to_list call failed for mentions\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    message->mention_roles = json_array_to_list(
-        json_object_object_get(data, "mention_roles")
-    );
-
-    if (!message->mention_roles){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_mentions() - json_array_to_list call failed for mention_roles\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    json_object *mentionchannelsobj = json_object_object_get(data, "mention_channels");
-
-    if (!mentionchannelsobj){
-        return true;
-    }
-
-    message->mention_channels = json_array_to_list(mentionchannelsobj);
-
-    if (!message->mention_channels){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] set_message_mentions() - json_array_to_list call failed for mention_channels\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    return true;
 }
 
 discord_message *message_init(discord_state *state, json_object *data){
     if (!state){
         log_write(
             logger,
-            LOG_ERROR,
+            LOG_WARNING,
             "[%s] message_init() - state is NULL\n",
             __FILE__
         );
@@ -241,7 +314,7 @@ discord_message *message_init(discord_state *state, json_object *data){
     if (!data){
         log_write(
             logger,
-            LOG_ERROR,
+            LOG_WARNING,
             "[%s] message_init() - data is NULL\n",
             __FILE__
         );
@@ -255,7 +328,7 @@ discord_message *message_init(discord_state *state, json_object *data){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] message_init() - message object alloc failed\n",
+            "[%s] message_init() - message alloc failed\n",
             __FILE__
         );
 
@@ -264,115 +337,41 @@ discord_message *message_init(discord_state *state, json_object *data){
 
     message->state = state;
 
-    if (!set_message_id(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_id call failed\n",
-            __FILE__
-        );
-
+    if (!construct_message(message, data)){
         message_free(message);
 
-        return NULL;
+        message = NULL;
     }
-
-    if (!set_message_channel_id(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_channel_id call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    if (!set_message_author(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_author call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    if (!set_message_guild_data(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_guild_data call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    if (!set_message_content(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_content call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    if (!set_message_timestamp(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_timestamp call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    if (!set_message_mentions(message, data)){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] message_init() - set_message_mentions call failed\n",
-            __FILE__
-        );
-
-        message_free(message);
-
-        return NULL;
-    }
-
-    /*
-    set_message_attachments
-    set_message_embeds
-    set_message_reactions
-    store channels and other objects in cache then keep id?
-    */
-
-    //const char *objstr = NULL;
-
-    message->tts = json_object_get_boolean(json_object_object_get(data, "tts"));
-    message->nonce = json_object_get_int(json_object_object_get(data, "nonce"));
-    message->pinned = json_object_get_boolean(json_object_object_get(data, "pinned"));
-    message->type = json_object_get_int(json_object_object_get(data, "type"));
-    message->flags = json_object_get_int(json_object_object_get(data, "flags"));
 
     return message;
 }
 
+bool message_update(discord_message *message, json_object *data){
+    if (!message){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] message_update() - message is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+    else if (!data){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] message_update() - data is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    return construct_message(message, data);
+}
+
+/* API calls */
 bool message_delete(const discord_message *message, const char *reason){
     if (!message){
         log_write(
@@ -434,6 +433,11 @@ void message_free(void *messageptr){
         return;
     }
 
+    if (message->activity){
+        free(message->activity->party_id);
+        free(message->activity);
+    }
+
     list_free(message->mentions);
     list_free(message->mention_roles);
     list_free(message->mention_channels);
@@ -446,6 +450,7 @@ void message_free(void *messageptr){
 
     member_free(message->member);
 
+    free(message->content);
     free(message);
 }
 
@@ -605,6 +610,7 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
     return success;
 }
 
+/* --- BOOKMARK --- convert this to the constructor format */
 json_object *message_reply_to_json(const discord_message_reply *reply){
     if (!reply){
         log_write(

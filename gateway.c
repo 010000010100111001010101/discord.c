@@ -320,19 +320,7 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
         return true;
     }
 
-    discord_gateway_event event = get_gateway_event_callback(gateway, name);
-
-    if (!event){
-        log_write(
-            logger,
-            LOG_DEBUG,
-            "[%s] handle_gateway_dispatch() - no event callback set for event %s\n",
-            __FILE__,
-            name
-        );
-
-        return true;
-    }
+    const void *eventdata = NULL;
 
     if (!strcmp(name, "READY")){
         json_object *userobj = json_object_object_get(data, "user");
@@ -379,13 +367,13 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
 
         string_copy(sessionid, gateway->session_id, sizeof(gateway->session_id));
 
-        return event(gateway->state->event_context, gateway->state->user);
+        eventdata = gateway->state->user;
     }
     else if (!strcmp(name, "RESUMED")){
         gateway->resume = false;
     }
-    else if (!strcmp(name, "MESSAGE_CREATE") || !strcmp(name, "MESSAGE_UPDATE")){
-        const discord_message *message = state_set_message(gateway->state, data);
+    else if (!strcmp(name, "MESSAGE_CREATE")){
+        const discord_message *message = state_set_message(gateway->state, data, false);
 
         if (!message){
             log_write(
@@ -398,18 +386,74 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
             return false;
         }
 
-        return event(gateway->state->event_context, message);
+        eventdata = message;
+    }
+    else if (!strcmp(name, "MESSAGE_UPDATE")){
+        const discord_message *message = state_set_message(gateway->state, data, true);
+
+        if (!message){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] handle_gateway_dispatch() - state_set_message call failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+
+        eventdata = message;
+    }
+    else if (!strcmp(name, "MESSAGE_DELETE")){
+        const char *idstr = json_object_get_string(
+            json_object_object_get(data, "id")
+        );
+
+        if (!idstr){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] id_from_message_object() - failed to get id from data: %s\n",
+                __FILE__,
+                json_object_to_json_string(data)
+            );
+
+            return false;
+        }
+
+        snowflake id = 0;
+        bool success = snowflake_from_string(idstr, &id);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] id_from_message_object() - snowflake_from_string call failed for id: %s\n",
+                __FILE__,
+                idstr
+            );
+
+            return false;
+        }
+
+        eventdata = &id;
     }
 
-    log_write(
-        logger,
-        LOG_DEBUG,
-        "[%s] handle_gateway_dispatch() - event %s is not preprocessed -- data is a json_object\n",
-        __FILE__,
-        name
-    );
+    discord_gateway_event event = get_gateway_event_callback(gateway, name);
 
-    return event(gateway->state->event_context, data);
+    if (!event){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] handle_gateway_dispatch() - no event callback set for event %s\n",
+            __FILE__,
+            name
+        );
+
+        return true;
+    }
+
+    return event(gateway->state->event_context, eventdata);
 }
 
 static bool handle_gateway_payload(discord_gateway *gateway){

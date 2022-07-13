@@ -53,7 +53,7 @@ typedef struct discord_embed {
     discord_state *state;
 
     char title[257];
-    char description[4097];
+    char *description;
     char url[DISCORD_EMBED_MAX_URL_LENGTH];
     char timestamp[33];
     int color;
@@ -66,7 +66,8 @@ typedef struct discord_embed {
     list *fields;
 } discord_embed;
 
-discord_embed *embed_init(discord_state *);
+list *embed_list_from_json_array(discord_state *, json_object *);
+discord_embed *embed_init(discord_state *, json_object *);
 
 size_t embed_get_length(const discord_embed *);
 json_object *embed_to_json(const discord_embed *);
@@ -78,13 +79,14 @@ bool embed_set_timestamp(discord_embed *, const char *);
 bool embed_set_color(discord_embed *, int);
 
 bool embed_set_footer(discord_embed *, const char *, const char *);
-bool embed_set_image(discord_embed *, const char *);
-bool embed_set_thumbnail(discord_embed *, const char *);
-bool embed_set_video(discord_embed *, const char *);
+bool embed_set_image(discord_embed *, const char *, int, int);
+bool embed_set_thumbnail(discord_embed *, const char *, int, int);
+bool embed_set_video(discord_embed *, const char *, int, int);
 bool embed_set_provider(discord_embed *, const char *, const char *);
 bool embed_set_author(discord_embed *, const char *, const char *, const char *);
 
 bool embed_add_field(discord_embed *, const char *, const char *, bool);
+bool embed_remove_field(discord_embed *, size_t);
 
 void embed_free(void *);
 

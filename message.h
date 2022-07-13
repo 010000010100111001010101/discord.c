@@ -85,7 +85,7 @@ typedef enum discord_message_activity_type {
 
 typedef struct discord_message_activity {
     discord_message_activity_type type;
-    char party_id[128];
+    char *party_id;
 } discord_message_activity;
 
 typedef struct discord_message {
@@ -96,7 +96,7 @@ typedef struct discord_message {
     snowflake guild_id;
     const discord_user *author;
     discord_member *member;
-    char content[2001];
+    char *content;
     char timestamp[33];
     char edited_timestamp[33];
     bool tts;
@@ -114,9 +114,9 @@ typedef struct discord_message {
     discord_message_activity *activity;
     //application ? BOOKMARK
     snowflake application_id;
-    //discord_message_reference *message_reference;
+    discord_message_reference *reference;
     int flags;
-    //const discord_message *referenced_message; store in cache and keep id?
+    const discord_message *referenced_message;
     //const discord_interaction *interaction;
     const discord_channel *thread;
     list *components;
@@ -125,6 +125,7 @@ typedef struct discord_message {
 } discord_message;
 
 discord_message *message_init(discord_state *, json_object *);
+bool message_update(discord_message *, json_object *);
 
 //bool message_edit(discord_message *, params);
 bool message_delete(const discord_message *, const char *);
