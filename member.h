@@ -1,7 +1,7 @@
 #ifndef MEMBER_H
 #define MEMBER_H
 
-//#include "roles.h"
+//#include "role.h"
 #include "state.h"
 #include "user.h"
 
@@ -14,16 +14,16 @@ typedef struct discord_member {
     char nick[34];
     char avatar[64];
     list *roles;
-    time_t joined_at;
-    time_t premium_since;
+    char joined_at[33];
+    char premium_since[33];
     bool deaf;
     bool mute;
     bool pending;
     char permissions[128];
-    bool communication_disabled_until;
+    char communication_disabled_until[33];
 } discord_member;
 
-discord_member *member_init(discord_state *, json_object *);
+discord_member *member_init(discord_state *, const discord_user *, json_object *);
 
 void member_free(void *);
 

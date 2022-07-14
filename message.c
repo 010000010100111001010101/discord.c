@@ -438,6 +438,8 @@ void message_free(void *messageptr){
         free(message->activity);
     }
 
+    member_free(message->member);
+
     list_free(message->mentions);
     list_free(message->mention_roles);
     list_free(message->mention_channels);
@@ -446,11 +448,9 @@ void message_free(void *messageptr){
     list_free(message->reactions);
     list_free(message->components);
     list_free(message->sticker_items);
-    list_free(message->stickers);
-
-    member_free(message->member);
 
     free(message->content);
+    free(message->reference);
     free(message);
 }
 

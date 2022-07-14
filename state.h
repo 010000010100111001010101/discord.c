@@ -20,12 +20,13 @@ typedef struct discord_user discord_user;
 #include <json-c/json.h>
 
 #define DISCORD_LIBRARY_NAME "discord.c"
-#define DISCORD_LIBRARY_VERSION "null"
+#define DISCORD_LIBRARY_URL "https://github.com/010000010100111001010101/discord.c"
+#define DISCORD_LIBRARY_VERSION "0"
 #define DISCORD_LIBRARY_OS "Linux"
 
 #define DISCORD_API "https://discord.com/api/v10"
 #define DISCORD_CDN "https://cdn.discordapp.com"
-#define DISCORD_USER_AGENT ("DiscordBot (" DISCORD_LIBRARY_NAME ", " DISCORD_LIBRARY_VERSION ")")
+#define DISCORD_USER_AGENT ("DiscordBot (" DISCORD_LIBRARY_URL " " DISCORD_LIBRARY_VERSION ")")
 
 #define DISCORD_GATEWAY_VERSION 9
 #define DISCORD_GATEWAY_PORT 443

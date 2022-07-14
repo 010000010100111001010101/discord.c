@@ -121,7 +121,6 @@ typedef struct discord_message {
     const discord_channel *thread;
     list *components;
     list *sticker_items;
-    list *stickers;
 } discord_message;
 
 discord_message *message_init(discord_state *, json_object *);
