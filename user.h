@@ -8,9 +8,9 @@
 #include <json-c/json.h>
 
 typedef struct discord_user_connection {
-    char id[64];
-    char name[64];
-    char type[256];
+    const char *id;
+    const char *name;
+    const char *type;
     bool revoked;
     list *integrations;
     bool verified;
@@ -42,19 +42,20 @@ typedef enum discord_user_flags {
 
 typedef struct discord_user {
     discord_state *state;
+    json_object *raw_object;
 
     snowflake id;
-    char username[33];
-    char discriminator[5];
-    char avatar[64];
+    const char *username;
+    const char *discriminator;
+    const char *avatar;
     bool bot;
     bool system;
     bool mfa_enabled;
-    char banner[64];
+    const char *banner;
     int accent_color;
-    char locale[32];
+    const char *locale;
     bool verified;
-    char email[255];
+    const char *email;
     int flags;
     int premium_type;
     int public_flags;
