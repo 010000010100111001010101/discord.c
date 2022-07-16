@@ -465,13 +465,23 @@ bool json_merge_objects(json_object *from, json_object *into){
 
         return false;
     }
+    else if (json_object_equal(from, into)){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] json_merge_objects() - objects are equal\n",
+            __FILE__
+        );
+
+        return true;
+    }
 
     struct json_object_iterator curr = json_object_iter_begin(from);
     struct json_object_iterator end = json_object_iter_end(from);
 
     while (!json_object_iter_equal(&curr, &end)){
         const char *key = json_object_iter_peek_name(&curr);
-        json_object *valueobj = json_object_get(json_object_iter_peek_value(&curr));
+        json_object *valueobj = json_object_iter_peek_value(&curr);
 
         if (json_object_object_add(into, key, valueobj)){
             log_write(
@@ -483,6 +493,8 @@ bool json_merge_objects(json_object *from, json_object *into){
 
             return false;
         }
+
+        json_object_iter_next(&curr);
     }
 
     return true;

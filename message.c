@@ -136,6 +136,12 @@ static bool construct_message(discord_message *message){
             success = message->author;
         }
         else if (!strcmp(key, "member")){
+            if (message->member){
+                member_free(message->member);
+
+                message->member = NULL;
+            }
+
             message->member = member_init(message->state, valueobj);
 
             success = message->member;
