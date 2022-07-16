@@ -319,6 +319,10 @@ static bool set_embed_json_fields(const discord_embed *embed, json_object *embed
     for (size_t index = 0; index < list_get_length(embed->fields); ++index){
         const discord_embed_field *field = list_get_generic(embed->fields, index);
 
+        if (!strlen(field->value)){
+            continue;
+        }
+
         json_object *fieldobj = json_object_new_object();
 
         if (!fieldobj){

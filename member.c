@@ -4,11 +4,11 @@
 
 static const logctx *logger = NULL;
 
-static bool construct_member(discord_member *member, json_object *data){
+static bool construct_member(discord_member *member){
     bool success = true;
 
-    struct json_object_iterator curr = json_object_iter_begin(data);
-    struct json_object_iterator end = json_object_iter_end(data);
+    struct json_object_iterator curr = json_object_iter_begin(member->raw_object);
+    struct json_object_iterator end = json_object_iter_end(member->raw_object);
 
     while (!json_object_iter_equal(&curr, &end)){
         const char *key = json_object_iter_peek_name(&curr);
@@ -39,22 +39,10 @@ static bool construct_member(discord_member *member, json_object *data){
             success = member->user;
         }
         else if (!strcmp(key, "nick")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->nick,
-                sizeof(member->nick)
-            );
+            member->nick = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "avatar")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->avatar,
-                sizeof(member->avatar)
-            );
+            member->avatar = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "roles")){
             if (member->roles){
@@ -116,22 +104,10 @@ static bool construct_member(discord_member *member, json_object *data){
             }
         }
         else if (!strcmp(key, "joined_at")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->joined_at,
-                sizeof(member->joined_at)
-            );
+            member->joined_at = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "premium_since")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->premium_since,
-                sizeof(member->premium_since)
-            );
+            member->premium_since = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "deaf")){
             member->deaf = json_object_get_boolean(valueobj);
@@ -143,22 +119,10 @@ static bool construct_member(discord_member *member, json_object *data){
             member->pending = json_object_get_boolean(valueobj);
         }
         else if (!strcmp(key, "permissions")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->permissions,
-                sizeof(member->permissions)
-            );
+            member->permissions = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "communication_disabled_until")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            success = string_copy(
-                objstr,
-                member->communication_disabled_until,
-                sizeof(member->communication_disabled_until)
-            );
+            member->communication_disabled_until = json_object_get_string(valueobj);
         }
 
         if (!success){
@@ -180,7 +144,7 @@ static bool construct_member(discord_member *member, json_object *data){
     return success;
 }
 
-discord_member *member_init(discord_state *state, const discord_user *user, json_object *data){
+discord_member *member_init(discord_state *state, json_object *data){
     if (!state){
         log_write(
             logger,
@@ -219,9 +183,9 @@ discord_member *member_init(discord_state *state, const discord_user *user, json
     }
 
     member->state = state;
-    member->user = user;
+    member->raw_object = json_object_get(data);
 
-    if (!construct_member(member, data)){
+    if (!construct_member(member)){
         member_free(member);
 
         return NULL;
@@ -243,6 +207,8 @@ void member_free(void *memberptr){
 
         return;
     }
+
+    json_object_put(member->raw_object);
 
     list_free(member->roles);
 

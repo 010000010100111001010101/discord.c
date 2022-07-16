@@ -3,7 +3,7 @@
 #include "log.h"
 #include "str.h"
 
-static const logctx *logger;
+static const logctx *logger = NULL;
 
 static bool construct_message_activity(discord_message *message, json_object *data){
     message->activity = calloc(1, sizeof(*message->activity));
@@ -20,26 +20,10 @@ static bool construct_message_activity(discord_message *message, json_object *da
     }
 
     json_object *obj = json_object_object_get(data, "type");
-
     message->activity->type = json_object_get_int(obj);
 
     obj = json_object_object_get(data, "party_id");
-
-    if (obj){
-        const char *objstr = json_object_get_string(obj);
-        message->activity->party_id = string_duplicate(objstr);
-
-        if (!message->activity->party_id){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] construct_message_activity() - string_duplicate call failed\n",
-                __FILE__
-            );
-
-            return false;
-        }
-    }
+    message->activity->party_id = json_object_get_string(obj);
 
     return true;
 }
@@ -105,11 +89,11 @@ static bool construct_message_reference(discord_message *message, json_object *d
     return success;
 }
 
-static bool construct_message(discord_message *message, json_object *data){
+static bool construct_message(discord_message *message){
     bool success = true;
 
-    struct json_object_iterator curr = json_object_iter_begin(data);
-    struct json_object_iterator end = json_object_iter_end(data);
+    struct json_object_iterator curr = json_object_iter_begin(message->raw_object);
+    struct json_object_iterator end = json_object_iter_end(message->raw_object);
 
     while (!json_object_iter_equal(&curr, &end)){
         const char *key = json_object_iter_peek_name(&curr);
@@ -152,39 +136,20 @@ static bool construct_message(discord_message *message, json_object *data){
             success = message->author;
         }
         else if (!strcmp(key, "member")){
-            //message->member = state_set_member or rely on message member data? --- BOOKMARK ---
+            message->member = member_init(message->state, valueobj);
+
+            success = message->member;
         }
         else if (!strcmp(key, "content")){
-            if (message->content){
-                free(message->content);
-
-                message->content = NULL;
-            }
-
-            const char *objstr = json_object_get_string(valueobj);
-            message->content = string_duplicate(objstr);
-
-            success = message->content;
+            message->content = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "timestamp")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            // i'd like to convert this to a time object --- BOOKMARK ---
-            success = string_copy(
-                objstr,
-                message->timestamp,
-                sizeof(message->timestamp)
-            );
+            /* i'd like to convert this to a time_t */
+            message->timestamp = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "edited_timestamp")){
-            const char *objstr = json_object_get_string(valueobj);
-
-            // same as above
-            success = string_copy(
-                objstr,
-                message->edited_timestamp,
-                sizeof(message->edited_timestamp)
-            );
+            /* same as above */
+            message->edited_timestamp = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "tts")){
             message->tts = json_object_get_boolean(valueobj);
@@ -193,16 +158,16 @@ static bool construct_message(discord_message *message, json_object *data){
             message->mention_everyone = json_object_get_boolean(valueobj);
         }
         else if (!strcmp(key, "mentions")){
-            // setup mention.c
+            // mention.c
         }
         else if (!strcmp(key, "mention_roles")){
-            // setup mention.c
+            // mention.c
         }
         else if (!strcmp(key, "mention_channels")){
-            // setup mention.c
+            // mention.c
         }
         else if (!strcmp(key, "attachments")){
-            // setup attachment.c ???
+            // attachment.c ???
         }
         else if (!strcmp(key, "embeds")){
             message->embeds = embed_list_from_json_array(message->state, valueobj);
@@ -210,7 +175,7 @@ static bool construct_message(discord_message *message, json_object *data){
             success = message->embeds;
         }
         else if (!strcmp(key, "reactions")){
-            // setup reaction.c ???
+            // reaction.c ???
         }
         else if (!strcmp(key, "nonce")){
             message->nonce = json_object_get_int(valueobj);
@@ -228,7 +193,6 @@ static bool construct_message(discord_message *message, json_object *data){
         }
         else if (!strcmp(key, "activity")){
             if (message->activity){
-                free(message->activity->party_id);
                 free(message->activity);
 
                 message->activity = NULL;
@@ -237,7 +201,7 @@ static bool construct_message(discord_message *message, json_object *data){
             success = construct_message_activity(message, valueobj);
         }
         else if (!strcmp(key, "application")){
-            // implement application.c
+            // application.c
         }
         else if (!strcmp(key, "application_id")){
             const char *objstr = json_object_get_string(valueobj);
@@ -336,8 +300,9 @@ discord_message *message_init(discord_state *state, json_object *data){
     }
 
     message->state = state;
+    message->raw_object = json_object_get(data);
 
-    if (!construct_message(message, data)){
+    if (!construct_message(message)){
         message_free(message);
 
         message = NULL;
@@ -368,7 +333,18 @@ bool message_update(discord_message *message, json_object *data){
         return false;
     }
 
-    return construct_message(message, data);
+    if (!json_merge_objects(data, message->raw_object)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] message_update() - json_merge_objects call failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    return construct_message(message);
 }
 
 /* API calls */
@@ -433,11 +409,9 @@ void message_free(void *messageptr){
         return;
     }
 
-    if (message->activity){
-        free(message->activity->party_id);
-        free(message->activity);
-    }
+    json_object_put(message->raw_object);
 
+    /* --- BOOKMARK --- add guild object, guild will have ownership of member */
     member_free(message->member);
 
     list_free(message->mentions);
@@ -449,7 +423,7 @@ void message_free(void *messageptr){
     list_free(message->components);
     list_free(message->sticker_items);
 
-    free(message->content);
+    free(message->activity);
     free(message->reference);
     free(message);
 }

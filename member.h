@@ -9,21 +9,22 @@
 
 typedef struct discord_member {
     discord_state *state;
+    json_object *raw_object;
 
     const discord_user *user;
-    char nick[34];
-    char avatar[64];
+    const char *nick;
+    const char *avatar;
     list *roles;
-    char joined_at[33];
-    char premium_since[33];
+    const char *joined_at;
+    const char *premium_since;
     bool deaf;
     bool mute;
     bool pending;
-    char permissions[128];
-    char communication_disabled_until[33];
+    const char *permissions;
+    const char *communication_disabled_until;
 } discord_member;
 
-discord_member *member_init(discord_state *, const discord_user *, json_object *);
+discord_member *member_init(discord_state *, json_object *);
 
 void member_free(void *);
 

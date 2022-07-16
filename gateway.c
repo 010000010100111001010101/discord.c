@@ -323,26 +323,16 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
     const void *eventdata = NULL;
 
     if (!strcmp(name, "READY")){
-        json_object *userobj = json_object_object_get(data, "user");
-
-        if (!userobj){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] handle_gateway_dispatch() - user object initiialization failed\n",
-                __FILE__
-            );
-
-            return false;
-        }
-
-        discord_user *user = user_init(gateway->state, userobj);
+        const discord_user *user = state_set_user(
+            gateway->state,
+            json_object_object_get(data, "user")
+        );
 
         if (!user){
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] handle_gateway_dispatch() - user initialization failed\n",
+                "[%s] handle_gateway_dispatch() - state_set_user call failed\n",
                 __FILE__
             );
 
@@ -371,6 +361,8 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
     }
     else if (!strcmp(name, "RESUMED")){
         gateway->resume = false;
+
+        eventdata = gateway->state->user;
     }
     else if (!strcmp(name, "MESSAGE_CREATE")){
         const discord_message *message = state_set_message(gateway->state, data, false);
@@ -932,6 +924,8 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
             "[%s] handle_gateway_event() - protocol destroyed -- shutting down event loop\n",
             __FILE__
         );
+
+        /* check for "random" disconnect, recreate context and reconnect */
 
         closeconn = true;
 

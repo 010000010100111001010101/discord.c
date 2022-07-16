@@ -35,7 +35,7 @@ typedef struct discord_user discord_user;
 #define DISCORD_GATEWAY_HEARTBEAT_JITTER 0.5
 #define DISCORD_GATEWAY_RATE_LIMIT_INTERVAL 60
 #define DISCORD_GATEWAY_RATE_LIMIT_COUNT 110
-#define DISCORD_GATEWAY_LWS_LOG_LEVEL (LLL_ERR | LLL_WARN | LLL_INFO | LLL_DEBUG)
+#define DISCORD_GATEWAY_LWS_LOG_LEVEL (LLL_ERR | LLL_WARN | LLL_NOTICE)
 
 typedef enum discord_gateway_intents {
     INTENT_GUILDS = 1,
@@ -80,11 +80,12 @@ typedef struct discord_state {
     const logctx *log;
     discord_gateway_intents intent;
     void *event_context;
-    void **user_pointer;
+    const void **user_pointer;
+
+    discord_http *http;
 
     json_object *presence;
-    discord_user *user;
-    discord_http *http;
+    const discord_user *user;
 
     list *messages;
     size_t max_messages;

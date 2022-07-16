@@ -85,20 +85,21 @@ typedef enum discord_message_activity_type {
 
 typedef struct discord_message_activity {
     discord_message_activity_type type;
-    char *party_id;
+    const char *party_id;
 } discord_message_activity;
 
 typedef struct discord_message {
     discord_state *state;
+    json_object *raw_object;
 
     snowflake id;
     snowflake channel_id;
     snowflake guild_id;
     const discord_user *author;
     discord_member *member;
-    char *content;
-    char timestamp[33];
-    char edited_timestamp[33];
+    const char *content;
+    const char *timestamp;
+    const char *edited_timestamp;
     bool tts;
     bool mention_everyone;
     list *mentions;
@@ -126,6 +127,7 @@ typedef struct discord_message {
 discord_message *message_init(discord_state *, json_object *);
 bool message_update(discord_message *, json_object *);
 
+/* API calls */
 //bool message_edit(discord_message *, params);
 bool message_delete(const discord_message *, const char *);
 

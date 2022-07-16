@@ -611,13 +611,12 @@ void state_free(discord_state *state){
         return;
     }
 
-    list_free(state->messages);
-    map_free(state->users);
-
     http_free(state->http);
 
-    user_free(state->user);
     json_object_put(state->presence);
+
+    list_free(state->messages);
+    map_free(state->users);
 
     free(state);
 }

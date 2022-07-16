@@ -454,8 +454,8 @@ json_object *map_to_json(const map *m){
     return json;
 }
 
-json_object *json_merge_objects(json_object *oldobj, json_object *newobj){
-    if (!oldobj || !newobj){
+bool json_merge_objects(json_object *from, json_object *into){
+    if (!from || !into){
         log_write(
             logger,
             LOG_WARNING,
@@ -463,23 +463,27 @@ json_object *json_merge_objects(json_object *oldobj, json_object *newobj){
             __FILE__
         );
 
-        return NULL;
+        return false;
     }
 
-    json_object *output = json_object_get(oldobj);
+    struct json_object_iterator curr = json_object_iter_begin(from);
+    struct json_object_iterator end = json_object_iter_end(from);
 
-    if (!output){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] json_merge_objects() - output object initialization failed\n",
-            __FILE__
-        );
+    while (!json_object_iter_equal(&curr, &end)){
+        const char *key = json_object_iter_peek_name(&curr);
+        json_object *valueobj = json_object_get(json_object_iter_peek_value(&curr));
 
-        return NULL;
+        if (json_object_object_add(into, key, valueobj)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] json_merge_objects() - json_object_object_add call failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
     }
 
-    /* iterate b and insert into output */
-
-    return output;
+    return true;
 }

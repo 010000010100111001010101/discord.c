@@ -239,8 +239,6 @@ bool discord_send_message(discord *client, snowflake channelid, const discord_me
             __FILE__,
             json_object_to_json_string(res->data)
         );
-
-        success = false;
     }
 
     http_response_free(res);
