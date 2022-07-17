@@ -3,6 +3,7 @@
 
 #include "json_utils.h"
 
+#include "application.h"
 #include "channel.h"
 #include "embed.h"
 #include "member.h"
@@ -113,7 +114,7 @@ typedef struct discord_message {
     snowflake webhook_id;
     discord_message_type type;
     discord_message_activity *activity;
-    //application ? BOOKMARK
+    discord_application *application;
     snowflake application_id;
     discord_message_reference *reference;
     int flags;

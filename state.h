@@ -4,12 +4,14 @@
 #include "log.h"
 #include "map.h"
 
+typedef struct discord_application discord_application;
 typedef struct discord_channel discord_channel;
 typedef struct discord_embed discord_embed;
 typedef struct discord_http discord_http;
 typedef struct discord_member discord_member;
 typedef struct discord_message discord_message;
 typedef struct discord_state discord_state;
+typedef struct discord_team discord_team;
 typedef struct discord_user discord_user;
 
 #include "channel.h"
@@ -76,14 +78,12 @@ typedef struct discord_state_options {
 
 typedef struct discord_state {
     const char *token;
-
     const logctx *log;
+    discord_http *http;
+
     discord_gateway_intents intent;
     void *event_context;
     const void **user_pointer;
-
-    discord_http *http;
-
     json_object *presence;
     const discord_user *user;
 

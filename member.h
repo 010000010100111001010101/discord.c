@@ -1,7 +1,6 @@
 #ifndef MEMBER_H
 #define MEMBER_H
 
-//#include "role.h"
 #include "state.h"
 #include "user.h"
 

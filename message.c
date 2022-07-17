@@ -207,7 +207,9 @@ static bool construct_message(discord_message *message){
             success = construct_message_activity(message, valueobj);
         }
         else if (!strcmp(key, "application")){
-            // application.c
+            message->application = application_init(message->state, valueobj);
+
+            success = message->application;
         }
         else if (!strcmp(key, "application_id")){
             const char *objstr = json_object_get_string(valueobj);
@@ -428,6 +430,8 @@ void message_free(void *messageptr){
     list_free(message->reactions);
     list_free(message->components);
     list_free(message->sticker_items);
+
+    application_free(message->application);
 
     free(message->activity);
     free(message->reference);

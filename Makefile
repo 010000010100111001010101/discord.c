@@ -1,8 +1,9 @@
 PROG = discordc
 SRCS = main.c \
        discord.c state.c snowflake.c http.c gateway.c \
-       member.c role.c message.c embed.c \
-       user.c channel.c \
+       member.c role.c \
+       application.c team.c \
+       user.c channel.c message.c embed.c \
        c-utils/json_utils.c c-utils/log.c c-utils/str.c c-utils/list.c c-utils/map.c c-utils/hashers/spooky.c
 OBJS = $(SRCS:.c=.o)
 IGNORE = -Wno-implicit-fallthrough -Wno-pointer-to-int-cast
