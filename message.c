@@ -514,7 +514,7 @@ static bool construct_message(discord_message *message){
             success = construct_message_reactions(message, valueobj);
         }
         else if (!strcmp(key, "nonce")){
-            message->nonce = json_object_get_int(valueobj);
+            message->nonce = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "pinned")){
             message->pinned = json_object_get_boolean(valueobj);

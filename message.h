@@ -108,7 +108,7 @@ typedef struct discord_message {
     list *attachments;
     list *embeds;
     list *reactions;
-    int nonce;
+    const char *nonce;
     bool pinned;
     snowflake webhook_id;
     discord_message_type type;

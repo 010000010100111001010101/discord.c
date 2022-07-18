@@ -1,16 +1,11 @@
-PROG = discordc
-SRCS = main.c \
-       discord.c state.c snowflake.c http.c gateway.c \
-       role.c reaction.c emoji.c \
-       application.c team.c user.c member.c \
-       channel.c message.c attachment.c embed.c \
-       c-utils/json_utils.c c-utils/log.c c-utils/str.c c-utils/list.c c-utils/map.c c-utils/hashers/spooky.c
+PROG = discord
+SRCS = $(wildcard *.c) $(wildcard c-utils/*.c) c-utils/hashers/spooky.c
 OBJS = $(SRCS:.c=.o)
 IGNORE = -Wno-implicit-fallthrough -Wno-pointer-to-int-cast
 DEBUGFLAGS = -Og -ggdb -DDEBUG -fsanitize=address
 
 CFLAGS = -std=c18 -pedantic -Wall -Wextra -Werror $(IGNORE) $(DEBUGFLAGS)
-INCLUDES = -I/usr/local/include -I/usr/include -I./c-utils
+INCLUDES = -I/usr/local/include -I/usr/include -I. -I./c-utils
 
 LDFLAGS = -L/usr/local/lib -L/usr/lib -L.
 LDLIBS = -lpthread -lcurl -ljson-c -lwebsockets
@@ -22,7 +17,7 @@ $(PROG): $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
 lib$(PROG).so: $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o lib$(PROG).so -fPIC -shared $(SRCS) $(LDFLAGS) $(LDLIBS) 
+	$(CC) $(CFLAGS) $(INCLUDES) -o lib$(PROG).so -fPIC $(SRCS) $(LDFLAGS) -shared $(LDLIBS) 
 
 .PHONY: clean
 clean:
