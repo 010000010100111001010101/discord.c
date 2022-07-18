@@ -1,15 +1,8 @@
 #ifndef DISCORD_H
 #define DISCORD_H
 
-#include "log.h"
-
-#include "channel.h"
-#include "embed.h"
 #include "gateway.h"
-#include "message.h"
-#include "snowflake.h"
 #include "state.h"
-#include "user.h"
 
 typedef struct discord_options {
     const logctx *log;

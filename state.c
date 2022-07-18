@@ -103,6 +103,21 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         return NULL;
     }
 
+    state->emojis = map_init();
+
+    if (!state->emojis){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_init() - emojis map initialization failed\n",
+            __FILE__
+        );
+
+        state_free(state);
+
+        return NULL;
+    }
+
     state->users = map_init();
 
     if (!state->users){
@@ -469,6 +484,134 @@ const discord_message *state_get_message(discord_state *state, snowflake id){
     return message;
 }
 
+const discord_emoji *state_set_emoji(discord_state *state, json_object *data){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_emoji() - state is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+    else if (!data){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_emoji() - data is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    const char *idstr = json_object_get_string(
+        json_object_object_get(data, "id")
+    );
+
+    if (!idstr){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_emoji() - failed to get id from data: %s\n",
+            __FILE__,
+            json_object_to_json_string(data)
+        );
+
+        return NULL;
+    }
+
+    snowflake id = 0;
+    bool success = snowflake_from_string(idstr, &id);
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_emoji() - snowflake_from_string call failed for id: %s\n",
+            __FILE__,
+            idstr
+        );
+
+        return NULL;
+    }
+
+    const discord_emoji *cached = state_get_emoji(state, id);
+
+    if (cached){
+        return cached;
+    }
+
+    discord_emoji *emoji = emoji_init(state, data);
+
+    if (!emoji){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_emoji() - emoji initialization failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    map_item k = {0};
+    k.type = M_TYPE_GENERIC;
+    k.size = sizeof(emoji->id);
+    k.data_copy = &emoji->id;
+
+    map_item v = {0};
+    v.type = M_TYPE_GENERIC;
+    v.size = sizeof(*emoji);
+    v.data = emoji;
+    v.generic_free = emoji_free;
+
+    if (!map_set(state->emojis, &k, &v)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_emoji() - map_set call for emojis failed\n",
+            __FILE__
+        );
+
+        emoji_free(emoji);
+
+        return NULL;
+    }
+
+    return emoji;
+}
+
+const discord_emoji *state_get_emoji(discord_state *state, snowflake id){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_get_emoji() - state is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    size_t idsize = sizeof(id);
+
+    if (!map_contains(state->emojis, idsize, &id)){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] state_get_emoji() - emoji %" PRIu64 " not found\n",
+            __FILE__,
+            id
+        );
+
+        return NULL;
+    }
+
+    return map_get_generic(state->emojis, idsize, &id);
+}
+
 const discord_user *state_set_user(discord_state *state, json_object *data){
     if (!state){
         log_write(
@@ -548,7 +691,7 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
 
     map_item v = {0};
     v.type = M_TYPE_GENERIC;
-    v.size = sizeof(user);
+    v.size = sizeof(*user);
     v.data = user;
     v.generic_free = user_free;
 
@@ -556,7 +699,7 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_user() - map_set call for cache failed\n",
+            "[%s] state_set_user() - map_set call for users failed\n",
             __FILE__
         );
 
@@ -586,7 +729,7 @@ const discord_user *state_get_user(discord_state *state, snowflake id){
         log_write(
             logger,
             LOG_DEBUG,
-            "[%s] state_get_cache() - user %" PRIu64 " not found in cache\n",
+            "[%s] state_get_user() - user %" PRIu64 " not found\n",
             __FILE__,
             id
         );
@@ -614,6 +757,7 @@ void state_free(discord_state *state){
     json_object_put(state->presence);
 
     list_free(state->messages);
+    map_free(state->emojis);
     map_free(state->users);
 
     free(state);

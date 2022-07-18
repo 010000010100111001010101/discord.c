@@ -295,6 +295,130 @@ static bool construct_message_mention_channels(discord_message *message, json_ob
     return success;
 }
 
+static bool construct_message_attachments(discord_message *message, json_object *data){
+    if (message->attachments){
+        list_empty(message->attachments);
+    }
+    else {
+        message->attachments = list_init();
+
+        if (!message->attachments){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_attachments() - attachments initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    bool success = true;
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *obj = json_object_array_get_idx(data, index);
+        discord_attachment *attachment = attachment_init(message->state, obj);
+
+        if (!attachment){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_attachments() - attachment initialization failed\n",
+                __FILE__
+            );
+
+            success = false;
+
+            break;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_GENERIC;
+        item.size = sizeof(*attachment);
+        item.data = attachment;
+
+        success = list_append(message->attachments, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_attachments() - list_append call failed\n",
+                __FILE__
+            );
+
+            attachment_free(attachment);
+
+            break;
+        }
+    }
+
+    return success;
+}
+
+static bool construct_message_reactions(discord_message *message, json_object *data){
+    if (message->reactions){
+        list_empty(message->reactions);
+    }
+    else {
+        message->reactions = list_init();
+
+        if (!message->reactions){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_reactions() - reactions initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    bool success = true;
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *obj = json_object_array_get_idx(data, index);
+        discord_reaction *reaction = reaction_init(message->state, obj);
+
+        if (!reaction){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_reactions() - reaction initialization failed\n",
+                __FILE__
+            );
+
+            success = false;
+
+            break;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_GENERIC;
+        item.size = sizeof(*reaction);
+        item.data = reaction;
+
+        success = list_append(message->reactions, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_reactions() - list_append call failed\n",
+                __FILE__
+            );
+
+            reaction_free(reaction);
+
+            break;
+        }
+    }
+
+    return success;
+}
+
 static bool construct_message(discord_message *message){
     bool success = true;
 
@@ -379,13 +503,7 @@ static bool construct_message(discord_message *message){
             success = construct_message_mention_channels(message, valueobj);
         }
         else if (!strcmp(key, "attachments")){
-            // attachment.c ???
-            log_write(
-                logger,
-                LOG_RAW,
-                "attachments content\n%s\n",
-                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
-            );
+            success = construct_message_attachments(message, valueobj);
         }
         else if (!strcmp(key, "embeds")){
             message->embeds = embed_list_from_json_array(message->state, valueobj);
@@ -393,13 +511,7 @@ static bool construct_message(discord_message *message){
             success = message->embeds;
         }
         else if (!strcmp(key, "reactions")){
-            // reaction.c ???
-            log_write(
-                logger,
-                LOG_RAW,
-                "reactions content\n%s\n",
-                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
-            );
+            success = construct_message_reactions(message, valueobj);
         }
         else if (!strcmp(key, "nonce")){
             message->nonce = json_object_get_int(valueobj);

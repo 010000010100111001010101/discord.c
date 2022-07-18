@@ -1,10 +1,5 @@
 #include "discord.h"
 
-#include "log.h"
-
-#include <stdlib.h>
-#include <string.h>
-
 /*
  * logger is global
  * all extern logger vars are const

@@ -3,8 +3,6 @@
 
 #include "state.h"
 
-#include <json-c/json.h>
-
 typedef enum discord_channel_type {
     CHANNEL_GUILD_TEXT = 0,
     CHANNEL_DM = 1,
@@ -22,26 +20,27 @@ typedef enum discord_channel_type {
 
 typedef struct discord_channel {
     discord_state *state;
+    json_object *raw_object;
 
     snowflake id;
     discord_channel_type type;
     snowflake guild_id;
     int position;
     list *permission_overwrites;
-    char name[101];
-    char topic[1025];
+    const char *name;
+    const char *topic;
     bool nsfw;
     snowflake last_message_id;
     int bitrate;
     int user_limit;
     int rate_limit_per_user;
     list *recipients;
-    char icon[128];
+    const char *icon;
     snowflake owner_id;
     snowflake application_id;
     snowflake parent_id;
     time_t last_pin_timestamp;
-    char rtc_region[128];
+    const char *rtc_region;
     int video_quality_mode;
     int message_count;
     int member_count;

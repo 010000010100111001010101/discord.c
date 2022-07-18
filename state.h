@@ -12,6 +12,7 @@
 typedef struct discord_application discord_application;
 typedef struct discord_channel discord_channel;
 typedef struct discord_embed discord_embed;
+typedef struct discord_emoji discord_emoji;
 typedef struct discord_http discord_http;
 typedef struct discord_member discord_member;
 typedef struct discord_message discord_message;
@@ -20,11 +21,14 @@ typedef struct discord_team discord_team;
 typedef struct discord_user discord_user;
 
 #include "application.h"
+#include "attachment.h"
 #include "channel.h"
 #include "embed.h"
+#include "emoji.h"
 #include "http.h"
 #include "member.h"
 #include "message.h"
+#include "reaction.h"
 #include "team.h"
 #include "user.h"
 
@@ -97,6 +101,7 @@ typedef struct discord_state {
     list *messages;
     size_t max_messages;
 
+    map *emojis;
     map *users;
 } discord_state;
 
@@ -108,6 +113,9 @@ bool state_set_gateway_presence(discord_state *, const time_t *, const list *, c
 
 const discord_message *state_set_message(discord_state *, json_object *, bool);
 const discord_message *state_get_message(discord_state *, snowflake);
+
+const discord_emoji *state_set_emoji(discord_state *, json_object *);
+const discord_emoji *state_get_emoji(discord_state *, snowflake);
 
 const discord_user *state_set_user(discord_state *, json_object *);
 const discord_user *state_get_user(discord_state *, snowflake);
