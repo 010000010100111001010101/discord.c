@@ -1,8 +1,5 @@
 #include "user.h"
 
-#include "log.h"
-#include "str.h"
-
 static const logctx *logger = NULL;
 
 static bool construct_user(discord_user *user){

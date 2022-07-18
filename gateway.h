@@ -2,7 +2,6 @@
 #define GATEWAY_H
 
 #include "state.h"
-#include "user.h"
 
 #include <libwebsockets.h>
 

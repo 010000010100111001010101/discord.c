@@ -1,7 +1,5 @@
 #include "embed.h"
 
-#include "str.h"
-
 static const logctx *logger = NULL;
 
 /* embed json constructors */

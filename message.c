@@ -1,8 +1,5 @@
 #include "message.h"
 
-#include "log.h"
-#include "str.h"
-
 static const logctx *logger = NULL;
 
 static bool construct_message_activity(discord_message *message, json_object *data){
@@ -45,45 +42,254 @@ static bool construct_message_reference(discord_message *message, json_object *d
     bool success = true;
 
     json_object *obj = json_object_object_get(data, "message_id");
+    const char *objstr = json_object_get_string(obj);
+    success = snowflake_from_string(objstr, &message->reference->message_id);
 
-    if (obj){
-        const char *objstr = json_object_get_string(obj);
-
-        success = snowflake_from_string(objstr, &message->reference->message_id);
-
-        if (!success){
-            return false;
-        }
+    if (!success){
+        return false;
     }
 
     obj = json_object_object_get(data, "channel_id");
+    objstr = json_object_get_string(obj);
+    success = snowflake_from_string(objstr, &message->reference->channel_id);
 
-    if (obj){
-        const char *objstr = json_object_get_string(obj);
-
-        success = snowflake_from_string(objstr, &message->reference->channel_id);
-
-        if (!success){
-            return false;
-        }
+    if (!success){
+        return false;
     }
 
     obj = json_object_object_get(data, "guild_id");
+    objstr = json_object_get_string(obj);
+    success = snowflake_from_string(objstr, &message->reference->guild_id);
 
-    if (obj){
-        const char *objstr = json_object_get_string(obj);
+    if (!success){
+        return false;
+    }
 
-        success = snowflake_from_string(objstr, &message->reference->guild_id);
+    obj = json_object_object_get(data, "fail_if_not_exists");
+    message->reference->fail_if_not_exists = json_object_get_boolean(obj);
 
-        if (!success){
+    return success;
+}
+
+static bool construct_message_mentions(discord_message *message, json_object *data){
+    if (message->mentions){
+        list_empty(message->mentions);
+    }
+    else {
+        message->mentions = list_init();
+
+        if (!message->mentions){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mentions() - mentions initialization failed\n",
+                __FILE__
+            );
+
             return false;
         }
     }
 
-    obj = json_object_object_get(data, "fail_if_not_exists");
+    bool success = true;
 
-    if (obj){
-        message->reference->fail_if_not_exists = json_object_get_boolean(obj);
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *obj = json_object_array_get_idx(data, index);
+        const discord_user *user = state_set_user(message->state, obj);
+
+        if (!user){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mentions() - state_set_user call failed for %s\n",
+                __FILE__,
+                json_object_to_json_string(obj)
+            );
+
+            break;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_GENERIC;
+        item.size = sizeof(*user);
+        item.data_copy = user;
+
+        success = list_append(message->mentions, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mentions() - list_append call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
+    }
+
+    return success;
+}
+
+static bool construct_message_mention_roles(discord_message *message, json_object *data){
+    if (message->mention_roles){
+        list_empty(message->mention_roles);
+    }
+    else {
+        message->mention_roles = list_init();
+
+        if (!message->mention_roles){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mention_roles() - mention_roles initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    bool success = true;
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *obj = json_object_array_get_idx(data, index);
+        const char *objstr = json_object_get_string(obj);
+
+        snowflake id = 0;
+        success = snowflake_from_string(objstr, &id);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] construct_message_mention_roles() - snowflake_from_string call failed for %s\n",
+                __FILE__,
+                json_object_to_json_string(obj)
+            );
+
+            break;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_UINT;
+        item.size = sizeof(id);
+        item.data_copy = &id;
+
+        success = list_append(message->mention_roles, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mention_roles() - list_append call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
+    }
+
+    return success;
+}
+
+static bool construct_message_mention_channels(discord_message *message, json_object *data){
+    if (message->mention_channels){
+        list_empty(message->mention_channels);
+    }
+    else {
+        message->mention_channels = list_init();
+
+        if (!message->mention_channels){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mention_channels() - mention_channels initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    bool success = true;
+
+    discord_message_channel_mention *cmention = NULL;
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *valueobj = json_object_array_get_idx(data, index);
+
+        cmention = calloc(1, sizeof(*cmention));
+
+        if (!cmention){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mention_channels() - cmention alloc failed\n",
+                __FILE__
+            );
+
+            success = false;
+
+            break;
+        }
+
+        json_object *obj = json_object_object_get(valueobj, "id");
+        const char *objstr = json_object_get_string(obj);
+        success = snowflake_from_string(objstr, &cmention->id);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] construct_message_mention_channels() - snowflake_from_string call failed for id\n",
+                __FILE__
+            );
+
+            break;
+        }
+
+        obj = json_object_object_get(valueobj, "guild_id");
+        objstr = json_object_get_string(obj);
+        success = snowflake_from_string(objstr, &cmention->guild_id);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] construct_message_mention_channels() - snowflake_from_string call failed for guild_id\n",
+                __FILE__
+            );
+
+            break;
+        }
+
+        obj = json_object_object_get(valueobj, "type");
+        cmention->type = json_object_get_int(obj);
+
+        obj = json_object_object_get(valueobj, "name");
+        cmention->name = json_object_get_string(obj);
+
+        list_item item = {0};
+        item.type = L_TYPE_GENERIC;
+        item.size = sizeof(*cmention);
+        item.data = cmention;
+
+        success = list_append(message->mention_roles, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_message_mention_roles() - list_append call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
+    }
+
+    if (!success){
+        free(cmention);
     }
 
     return success;
@@ -164,16 +370,22 @@ static bool construct_message(discord_message *message){
             message->mention_everyone = json_object_get_boolean(valueobj);
         }
         else if (!strcmp(key, "mentions")){
-            // mention.c
+            success = construct_message_mentions(message, valueobj);
         }
         else if (!strcmp(key, "mention_roles")){
-            // mention.c
+            success = construct_message_mention_roles(message, valueobj);
         }
         else if (!strcmp(key, "mention_channels")){
-            // mention.c
+            success = construct_message_mention_channels(message, valueobj);
         }
         else if (!strcmp(key, "attachments")){
             // attachment.c ???
+            log_write(
+                logger,
+                LOG_RAW,
+                "attachments content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
         else if (!strcmp(key, "embeds")){
             message->embeds = embed_list_from_json_array(message->state, valueobj);
@@ -182,6 +394,12 @@ static bool construct_message(discord_message *message){
         }
         else if (!strcmp(key, "reactions")){
             // reaction.c ???
+            log_write(
+                logger,
+                LOG_RAW,
+                "reactions content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
         else if (!strcmp(key, "nonce")){
             message->nonce = json_object_get_int(valueobj);
@@ -239,15 +457,39 @@ static bool construct_message(discord_message *message){
         }
         else if (!strcmp(key, "interaction")){
             // interaction.c ???
+            log_write(
+                logger,
+                LOG_RAW,
+                "interaction content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
         else if (!strcmp(key, "thread")){
             // state_set_channel(message->state, data, false); --- BOOKMARK ---
+            log_write(
+                logger,
+                LOG_RAW,
+                "thread content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
         else if (!strcmp(key, "components")){
             // component.c ???
+            log_write(
+                logger,
+                LOG_RAW,
+                "components content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
         else if (!strcmp(key, "sticker_items")){
             // sticker.c
+            log_write(
+                logger,
+                LOG_RAW,
+                "sticker items content\n%s\n",
+                json_object_to_json_string_ext(valueobj, JSON_C_TO_STRING_PRETTY)
+            );
         }
 
         if (!success){

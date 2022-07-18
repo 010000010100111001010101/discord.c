@@ -3,11 +3,7 @@
 
 #include "state.h"
 
-#include <json-c/json.h>
-
-#define DISCORD_EMBED_MAX_LENGTH 6000
-#define DISCORD_EMBED_MAX_URL_LENGTH 512
-#define DISCORD_EMBED_MAX_FIELDS 25
+#define DISCORD_EMBED_MAX_URL_LENGTH 256
 
 typedef struct discord_embed_footer {
     char text[2049];

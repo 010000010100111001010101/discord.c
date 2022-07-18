@@ -1,8 +1,69 @@
 #include "member.h"
 
-#include "str.h"
-
 static const logctx *logger = NULL;
+
+static bool construct_member_roles(discord_member *member, json_object *data){
+    if (member->roles){
+        list_empty(member->roles);
+    }
+    else {
+        member->roles = list_init();
+
+        if (!member->roles){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_member_roles() - roles initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+    }
+
+    bool success = true;
+
+    for (size_t index = 0; index < json_object_array_length(data); ++index){
+        json_object *obj = json_object_array_get_idx(data, index);
+        const char *objstr = json_object_get_string(obj);
+
+        snowflake id = 0;
+
+        success = snowflake_from_string(objstr, &id);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] construct_member_roles() - snowflake_from_string call failed for %s\n",
+                __FILE__,
+                json_object_to_json_string(obj)
+            );
+
+            break;
+        }
+
+        list_item item = {0};
+        item.type = L_TYPE_UINT;
+        item.size = sizeof(id);
+        item.data_copy = &id;
+
+        success = list_append(member->roles, &item);
+
+        if (!success){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] construct_member_roles() - list_append call failed\n",
+                __FILE__
+            );
+
+            break;
+        }
+    }
+
+    return success;
+}
 
 static bool construct_member(discord_member *member){
     bool success = true;
@@ -45,63 +106,7 @@ static bool construct_member(discord_member *member){
             member->avatar = json_object_get_string(valueobj);
         }
         else if (!strcmp(key, "roles")){
-            if (member->roles){
-                list_empty(member->roles);
-            }
-            else {
-                member->roles = list_init();
-
-                if (!member->roles){
-                    log_write(
-                        logger,
-                        LOG_ERROR,
-                        "[%s] construct_member() - roles initialization failed\n",
-                        __FILE__
-                    );
-
-                    success = false;
-
-                    break;
-                }
-            }
-
-            for (size_t index = 0; index < json_object_array_length(valueobj); ++index){
-                json_object *obj = json_object_array_get_idx(valueobj, index);
-                const char *idstr = json_object_get_string(obj);
-
-                snowflake id = 0;
-
-                success = snowflake_from_string(idstr, &id);
-
-                if (!success){
-                    log_write(
-                        logger,
-                        LOG_WARNING,
-                        "[%s] construct_member() - snowflake_from_string call failed\n",
-                        __FILE__
-                    );
-
-                    break;
-                }
-
-                list_item item = {0};
-                item.type = L_TYPE_GENERIC;
-                item.size = sizeof(id);
-                item.data_copy = &id;
-
-                success = list_append(member->roles, &item);
-
-                if (!success){
-                    log_write(
-                        logger,
-                        LOG_ERROR,
-                        "[%s] construct_member() - list_append call failed\n",
-                        __FILE__
-                    );
-
-                    break;
-                }
-            }
+            success = construct_member_roles(member, valueobj);
         }
         else if (!strcmp(key, "joined_at")){
             member->joined_at = json_object_get_string(valueobj);

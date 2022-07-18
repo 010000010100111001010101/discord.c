@@ -1,7 +1,5 @@
 #include "state.h"
 
-#include "json_utils.h"
-
 static const logctx *logger = NULL;
 
 static const char *statuses[] = {

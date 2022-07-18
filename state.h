@@ -1,8 +1,13 @@
 #ifndef STATE_H
 #define STATE_H
 
+#include "json_utils.h"
+#include "list.h"
 #include "log.h"
 #include "map.h"
+#include "str.h"
+
+#include "snowflake.h"
 
 typedef struct discord_application discord_application;
 typedef struct discord_channel discord_channel;
@@ -14,12 +19,14 @@ typedef struct discord_state discord_state;
 typedef struct discord_team discord_team;
 typedef struct discord_user discord_user;
 
+#include "application.h"
 #include "channel.h"
+#include "embed.h"
 #include "http.h"
+#include "member.h"
 #include "message.h"
+#include "team.h"
 #include "user.h"
-
-#include <json-c/json.h>
 
 #define DISCORD_LIBRARY_NAME "discord.c"
 #define DISCORD_LIBRARY_URL "https://github.com/010000010100111001010101/discord.c"

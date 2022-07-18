@@ -1,15 +1,7 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
-#include "json_utils.h"
-
-#include "application.h"
-#include "channel.h"
-#include "embed.h"
-#include "member.h"
-#include "snowflake.h"
 #include "state.h"
-#include "user.h"
 
 typedef struct discord_message_reference {
     snowflake message_id;
@@ -88,6 +80,13 @@ typedef struct discord_message_activity {
     discord_message_activity_type type;
     const char *party_id;
 } discord_message_activity;
+
+typedef struct discord_message_channel_mention {
+    snowflake id;
+    snowflake guild_id;
+    int type;
+    const char *name;
+} discord_message_channel_mention;
 
 typedef struct discord_message {
     discord_state *state;

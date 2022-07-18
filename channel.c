@@ -1,7 +1,5 @@
 #include "channel.h"
 
-#include "log.h"
-
 static const logctx *logger = NULL;
 
 discord_channel *channel_init(discord_state *state, json_object *data){

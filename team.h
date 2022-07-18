@@ -1,11 +1,7 @@
 #ifndef TEAM_H
 #define TEAM_H
 
-#include "list.h"
-
-#include "snowflake.h"
 #include "state.h"
-#include "user.h"
 
 typedef enum discord_team_membership_state {
     TEAM_MEMBERSHIP_INVITED = 1,

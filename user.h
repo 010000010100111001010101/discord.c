@@ -1,8 +1,6 @@
 #ifndef USER_H
 #define USER_H
 
-#include "list.h"
-#include "snowflake.h"
 #include "state.h"
 
 #include <json-c/json.h>

@@ -1,10 +1,5 @@
 #include "gateway.h"
 
-#include "json_utils.h"
-#include "str.h"
-
-#include "message.h"
-
 static const logctx *logger = NULL;
 
 typedef struct gateway_receive_buffer {
