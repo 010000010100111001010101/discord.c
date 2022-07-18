@@ -13,11 +13,11 @@ LDLIBS = -lpthread -lcurl -ljson-c -lwebsockets
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-$(PROG): $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
-
 lib$(PROG).so: $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o lib$(PROG).so -fPIC $(SRCS) $(LDFLAGS) -shared $(LDLIBS) 
+
+$(PROG): $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(PROG) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
 .PHONY: clean
 clean:
