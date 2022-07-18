@@ -1,4 +1,4 @@
-PROG = discord
+PROG = discordc
 SRCS = $(wildcard *.c) $(wildcard c-utils/*.c) c-utils/hashers/spooky.c
 OBJS = $(SRCS:.c=.o)
 IGNORE = -Wno-implicit-fallthrough -Wno-pointer-to-int-cast

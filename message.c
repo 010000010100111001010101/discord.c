@@ -399,6 +399,7 @@ static bool construct_message_reactions(discord_message *message, json_object *d
         item.type = L_TYPE_GENERIC;
         item.size = sizeof(*reaction);
         item.data = reaction;
+        item.generic_free = reaction_free;
 
         success = list_append(message->reactions, &item);
 

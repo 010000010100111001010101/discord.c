@@ -58,6 +58,7 @@ typedef struct discord_gateway {
     bool connected;
     bool reconnect;
     bool resume;
+    int attempts;
 
     char session_id[33];
     int last_sequence;
