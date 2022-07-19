@@ -907,7 +907,21 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
     bool success = true;
 
     for (size_t index = 0; index < list_get_length(embeds); ++index){
-        const discord_embed *embed = list_get_generic(embeds, index);
+        embed = list_get_generic(embeds, index);
+        json_object *copy = json_object_get(embed->raw_object);
+
+        if (!copy){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_reply_json_embeds() - json_object_get_call failed\n",
+                __FILE__
+            );
+
+            success = false;
+
+            break;
+        }
 
         if (json_object_array_add(embedsobj, embed->raw_object)){
             log_write(
@@ -916,6 +930,8 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
                 "[%s] set_reply_json_embeds() - json_object_array_add call failed\n",
                 __FILE__
             );
+
+            json_object_put(copy);
 
             success = false;
 
