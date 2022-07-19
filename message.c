@@ -846,7 +846,7 @@ static bool set_reply_json_misc(json_object *replyobj, bool tts, int flags){
 }
 
 static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *embed, const list *embeds){
-    if (!embed && !embed){
+    if (!embed && !embeds){
         return true;
     }
 
@@ -863,28 +863,34 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
         return false;
     }
 
-    json_object *obj = NULL;
-    bool success = false;
+    if (json_object_object_add(replyobj, "embeds", embedsobj)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_reply_json_embeds() - json_object_object_add call failed for embeds\n",
+            __FILE__
+        );
+
+        json_object_put(embedsobj);
+
+        return false;
+    }
 
     if (embed){
-        obj = embed_to_json(embed);
+        json_object *copy = json_object_get(embed->raw_object);
 
-        if (!obj){
+        if (!copy){
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] set_reply_json_embeds() - embed_to_json call failed for embed\n",
+                "[%s] set_reply_json_embeds() - json_object_get call failed for embed\n",
                 __FILE__
             );
-
-            json_object_put(embedsobj);
 
             return false;
         }
 
-        success = !json_object_array_add(embedsobj, obj);
-
-        if (!success){
+        if (json_object_array_add(embedsobj, copy)){
             log_write(
                 logger,
                 LOG_ERROR,
@@ -892,34 +898,18 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
                 __FILE__
             );
 
-            json_object_put(embedsobj);
+            json_object_put(copy);
 
             return false;
         }
     }
 
+    bool success = true;
+
     for (size_t index = 0; index < list_get_length(embeds); ++index){
         const discord_embed *embed = list_get_generic(embeds, index);
-        obj = embed_to_json(embed);
 
-        if (!obj){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] set_reply_json_embeds() - embed_to_json call failed\n",
-                __FILE__
-            );
-
-            json_object_put(embedsobj);
-
-            success = false;
-
-            break;
-        }
-
-        success = json_object_array_add(embedsobj, obj);
-
-        if (!success){
+        if (json_object_array_add(embedsobj, embed->raw_object)){
             log_write(
                 logger,
                 LOG_ERROR,
@@ -927,22 +917,9 @@ static bool set_reply_json_embeds(json_object *replyobj, const discord_embed *em
                 __FILE__
             );
 
+            success = false;
+
             break;
-        }
-    }
-
-    if (success){
-        success = !json_object_object_add(replyobj, "embeds", embedsobj);
-
-        if (!success){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] set_reply_json_embeds() - json_object_object_add call failed\n",
-                __FILE__
-            );
-
-            json_object_put(embedsobj);
         }
     }
 

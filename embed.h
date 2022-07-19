@@ -3,55 +3,59 @@
 
 #include "state.h"
 
-#define DISCORD_EMBED_MAX_URL_LENGTH 256
-
 typedef struct discord_embed_footer {
-    char text[2049];
-    char icon_url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *text;
+    const char *icon_url;
+    const char *proxy_icon_url;
 } discord_embed_footer;
 
 typedef struct discord_embed_image {
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *url;
+    const char *proxy_url;
     int height;
     int width;
 } discord_embed_image;
 
 typedef struct discord_embed_thumbnail {
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *url;
+    const char *proxy_url;
     int height;
     int width;
 } discord_embed_thumbnail;
 
 typedef struct discord_embed_video {
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *url;
+    const char *proxy_url;
     int height;
     int width;
 } discord_embed_video;
 
 typedef struct discord_embed_provider {
-    char name[257];
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *name;
+    const char *url;
 } discord_embed_provider;
 
 typedef struct discord_embed_author {
-    char name[257];
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
-    char icon_url[DISCORD_EMBED_MAX_URL_LENGTH];
+    const char *name;
+    const char *url;
+    const char *icon_url;
+    const char *proxy_icon_url;
 } discord_embed_author;
 
 typedef struct discord_embed_field {
-    char name[257];
-    char value[1025];
+    const char *name;
+    const char *value;
     bool display_inline;
 } discord_embed_field;
 
 typedef struct discord_embed {
     discord_state *state;
+    json_object *raw_object;
 
-    char title[257];
-    char *description;
-    char url[DISCORD_EMBED_MAX_URL_LENGTH];
-    char timestamp[33];
+    const char *title;
+    const char *description;
+    const char *url;
+    const char *timestamp;
     int color;
     discord_embed_footer *footer;
     discord_embed_image *image;
@@ -66,7 +70,6 @@ list *embed_list_from_json_array(discord_state *, json_object *);
 discord_embed *embed_init(discord_state *, json_object *);
 
 size_t embed_get_length(const discord_embed *);
-json_object *embed_to_json(const discord_embed *);
 
 bool embed_set_title(discord_embed *, const char *);
 bool embed_set_description(discord_embed *, const char *);
@@ -75,9 +78,9 @@ bool embed_set_timestamp(discord_embed *, const char *);
 bool embed_set_color(discord_embed *, int);
 
 bool embed_set_footer(discord_embed *, const char *, const char *);
-bool embed_set_image(discord_embed *, const char *, int, int);
-bool embed_set_thumbnail(discord_embed *, const char *, int, int);
-bool embed_set_video(discord_embed *, const char *, int, int);
+bool embed_set_image(discord_embed *, const char *);
+bool embed_set_thumbnail(discord_embed *, const char *);
+bool embed_set_video(discord_embed *, const char *);
 bool embed_set_provider(discord_embed *, const char *, const char *);
 bool embed_set_author(discord_embed *, const char *, const char *, const char *);
 
