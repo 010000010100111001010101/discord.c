@@ -18,6 +18,15 @@ typedef enum discord_channel_type {
     CHANNEL_GUILD_FORUM = 15
 } discord_channel_type;
 
+typedef enum discord_channel_video_quality {
+    CHANNEL_VIDEO_QUALITY_AUTO = 1,
+    CHANNEL_VIDEO_QUALITY_FULL = 2
+} discord_channel_video_quality;
+
+typedef enum discord_channel_flags {
+    CHANNEL_PINNED = 2
+} discord_channel_flags;
+
 typedef struct discord_channel {
     discord_state *state;
     json_object *raw_object;
@@ -39,20 +48,20 @@ typedef struct discord_channel {
     snowflake owner_id;
     snowflake application_id;
     snowflake parent_id;
-    time_t last_pin_timestamp;
+    const char *last_pin_timestamp;
     const char *rtc_region;
-    int video_quality_mode;
+    discord_channel_video_quality video_quality_mode;
     int message_count;
     int member_count;
     //discord_thread_metadata *thread_metadata;
     //discord_thread_member *member;
     int default_auto_archive_duration;
-    char permissions[256];
-    int flags;
+    const char *permissions;
+    discord_channel_flags flags;
 } discord_channel;
 
 discord_channel *channel_init(discord_state *, json_object *);
 
-void channel_free(discord_channel *);
+void channel_free(void *);
 
 #endif
