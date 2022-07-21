@@ -864,16 +864,18 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
             __FILE__
         );
 
-        if (gateway->connected && !gateway->reconnect){
+        if (gateway->connected){
             log_write(
                 logger,
                 LOG_DEBUG,
-                "[%s] handle_gateway_event() - unknown reason for disconnect -- reconnecting\n",
+                "[%s] handle_gateway_event() - unexpected disconnect -- reconnecting\n",
                 __FILE__
             );
 
             gateway->reconnect = true;
             gateway->resume = true;
+
+            gateway_disconnect(gateway);
         }
 
         break;
@@ -929,8 +931,6 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
                 __FILE__
             );
         }
-
-        ++gateway->attempts;
 
         break;
     case LWS_CALLBACK_PROTOCOL_DESTROY:
