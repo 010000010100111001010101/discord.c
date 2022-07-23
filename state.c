@@ -37,7 +37,20 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         return NULL;
     }
 
-    state->token = token;
+    state->token = string_duplicate(token);
+
+    if (!state->token){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_init() - string_duplicate call failed for token\n",
+            __FILE__
+        );
+
+        state_free(state);
+
+        return NULL;
+    }
 
     state->user_pointer = NULL;
 
@@ -760,5 +773,23 @@ void state_free(discord_state *state){
     map_free(state->emojis);
     map_free(state->users);
 
+    free(state->token);
     free(state);
+}
+
+void gateway_presence_free(discord_gateway_presence *presence){
+    if (!presence){
+        log_write(
+            logger,
+            LOG_DEBUG,
+            "[%s] gateway_presence_free() - presence is NULL\n",
+            __FILE__
+        );
+
+        return;
+    }
+
+    list_free(presence->activities);
+    free(presence->status);
+    free(presence);
 }

@@ -74,8 +74,8 @@ typedef enum discord_gateway_intents {
 
 typedef struct discord_gateway_presence {
     time_t since;
-    const list *activities;
-    const char *status;
+    list *activities;
+    char *status;
     bool afk;
 } discord_gateway_presence;
 
@@ -88,7 +88,7 @@ typedef struct discord_state_options {
 } discord_state_options;
 
 typedef struct discord_state {
-    const char *token;
+    char *token;
     const logctx *log;
     discord_http *http;
 
@@ -121,5 +121,7 @@ const discord_user *state_set_user(discord_state *, json_object *);
 const discord_user *state_get_user(discord_state *, snowflake);
 
 void state_free(discord_state *);
+
+void gateway_presence_free(discord_gateway_presence *);
 
 #endif

@@ -359,6 +359,9 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
 
         eventdata = gateway->state->user;
     }
+    else if (!strcmp(name, "GUILD_CREATE")){
+        /* set guild up for cache */
+    }
     else if (!strcmp(name, "MESSAGE_CREATE")){
         const discord_message *message = state_set_message(gateway->state, data, false);
 
@@ -1461,8 +1464,10 @@ bool gateway_send(discord_gateway *gateway, discord_gateway_opcodes op, json_obj
 
     lws_callback_on_writable(gateway->wsi);
 
-    gateway->last_sent = lws_now_secs();
-    gateway->sent_count += 1;
+    if (op != GATEWAY_OP_HEARTBEAT){
+        gateway->last_sent = lws_now_secs();
+        gateway->sent_count += 1;
+    }
 
     return success;
 }
