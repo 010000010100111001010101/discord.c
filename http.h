@@ -50,6 +50,8 @@ discord_http_response *http_request(discord_http *, http_method, const char *, c
 discord_http_response *http_get_gateway(discord_http *);
 discord_http_response *http_get_bot_gateway(discord_http *);
 
+discord_http_response *http_get_current_application_information(discord_http *);
+
 /* User */
 discord_http_response *http_get_current_user(discord_http *);
 discord_http_response *http_get_user(discord_http *, snowflake);

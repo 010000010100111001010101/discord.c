@@ -6,6 +6,48 @@
  */
 const logctx *logger = NULL;
 
+static bool set_application_information(discord *client){
+    discord_http_response *res = http_get_current_application_information(
+        client->state->http
+    );
+
+    if (!res){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] set_application_information() - http_get_current_application_information call failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+    else if (res->status != 200){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] set_application_information() - request failed: %s\n",
+            __FILE__,
+            json_object_to_json_string(res->data)
+        );
+    }
+    else {
+        client->application = application_init(client->state, res->data);
+
+        if (!client->application){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] set_application_information() - application_init call failed\n",
+                __FILE__
+            );
+        }
+    }
+
+    http_response_free(res);
+
+    return client->application ? true : false;
+}
+
 discord *discord_init(const char *token, const discord_options *opts){
     logger = opts ? opts->log : NULL;
 
@@ -62,8 +104,20 @@ discord *discord_init(const char *token, const discord_options *opts){
     }
 
     client->state->event_context = client;
-    client->state->application_pointer = (void *)&client->application;
     client->state->user_pointer = (void *)&client->user;
+
+    if (!set_application_information(client)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] discord_init() - set_application_information call failed\n",
+            __FILE__
+        );
+
+        discord_free(client);
+
+        return NULL;
+    }
 
     client->gateway = gateway_init(client->state, &gopts);
 

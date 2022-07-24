@@ -1276,6 +1276,10 @@ discord_http_response *http_get_bot_gateway(discord_http *http){
     return http_request(http, HTTP_GET, "/gateway/bot", NULL);
 }
 
+discord_http_response *http_get_current_application_information(discord_http *http){
+    return http_request(http, HTTP_GET, "/oauth2/applications/@me", NULL);
+}
+
 /* User */
 discord_http_response *http_get_current_user(discord_http *http){
     return http_request(http, HTTP_GET, "/users/@me", NULL);
