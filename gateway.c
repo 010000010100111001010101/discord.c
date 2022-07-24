@@ -337,6 +337,24 @@ static bool handle_gateway_dispatch(discord_gateway *gateway, const char *name, 
         gateway->state->user = user;
         *gateway->state->user_pointer = user;
 
+        discord_application *application = application_init(
+            gateway->state,
+            json_object_object_get(data, "application")
+        );
+
+        if (!application){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] handle_gateway_dispatch() - application initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+
+        *gateway->state->application_pointer = application;
+
         const char *sessionid = json_object_get_string(json_object_object_get(data, "session_id"));
 
         if (!sessionid){

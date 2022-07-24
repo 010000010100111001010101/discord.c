@@ -62,6 +62,7 @@ discord *discord_init(const char *token, const discord_options *opts){
     }
 
     client->state->event_context = client;
+    client->state->application_pointer = (void *)&client->application;
     client->state->user_pointer = (void *)&client->user;
 
     client->gateway = gateway_init(client->state, &gopts);
@@ -261,8 +262,10 @@ void discord_free(discord *client){
         return;
     }
 
-    gateway_free(client->gateway);
     state_free(client->state);
+    gateway_free(client->gateway);
+
+    application_free(client->application);
 
     free(client);
 }

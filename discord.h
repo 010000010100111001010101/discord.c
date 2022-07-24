@@ -21,8 +21,9 @@ typedef struct discord_options {
 
 typedef struct discord {
     discord_state *state;
-
     discord_gateway *gateway;
+
+    discord_application *application;
     const discord_user *user;
 } discord;
 

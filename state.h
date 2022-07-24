@@ -96,9 +96,11 @@ typedef struct discord_state {
 
     discord_gateway_intents intent;
     void *event_context;
+    void **application_pointer;
     const void **user_pointer;
-    json_object *presence;
+
     const discord_user *user;
+    json_object *presence;
 
     list *messages;
     size_t max_messages;
