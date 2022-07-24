@@ -73,6 +73,8 @@ typedef enum discord_gateway_intents {
 } discord_gateway_intents;
 
 typedef struct discord_gateway_presence {
+    json_object *raw_object;
+
     time_t since;
     list *activities;
     char *status;
@@ -110,6 +112,7 @@ discord_state *state_init(const char *, const discord_state_options *);
 json_object *state_get_gateway_presence(discord_state *);
 const char *state_get_gateway_presence_string(discord_state *);
 bool state_set_gateway_presence(discord_state *, const time_t *, const list *, const char *, const bool *);
+bool state_set_gateway_presence_raw(discord_state *, json_object *);
 
 const discord_message *state_set_message(discord_state *, json_object *, bool);
 const discord_message *state_get_message(discord_state *, snowflake);

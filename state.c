@@ -61,13 +61,23 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         state->intent = opts->intent;
 
         if (opts->presence){
-            bool success = state_set_gateway_presence(
-                state,
-                &opts->presence->since,
-                opts->presence->activities,
-                opts->presence->status,
-                &opts->presence->afk
-            );
+            bool success = false;
+
+            if (opts->presence->raw_object){
+                success = state_set_gateway_presence_raw(
+                    state,
+                    opts->presence->raw_object
+                );
+            }
+            else {
+                success = state_set_gateway_presence(
+                    state,
+                    &opts->presence->since,
+                    opts->presence->activities,
+                    opts->presence->status,
+                    &opts->presence->afk
+                );
+            }
 
             if (!success){
                 log_write(
@@ -326,6 +336,40 @@ bool state_set_gateway_presence(discord_state *state, const time_t *since, const
     json_object_object_add(presenceobj, "afk", obj);
 
     state->presence = presenceobj;
+
+    return true;
+}
+
+bool state_set_gateway_presence_raw(discord_state *state, json_object *data){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_gateway_presence_from_json() - state is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    json_object *copy = json_object_get(data);
+
+    if (!copy){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_gateway_presence_raw() - json_object_get call failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    if (state->presence){
+        json_object_put(state->presence);
+    }
+
+    state->presence = copy;
 
     return true;
 }

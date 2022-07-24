@@ -138,13 +138,21 @@ bool discord_set_presence(discord *client, const discord_gateway_presence *prese
     bool success = false;
 
     if (presence){
-        success = state_set_gateway_presence(
-            client->state,
-            &presence->since,
-            presence->activities,
-            presence->status,
-            &presence->afk
-        );
+        if (presence->raw_object){
+            success = state_set_gateway_presence_raw(
+                client->state,
+                presence->raw_object
+            );
+        }
+        else {
+            success = state_set_gateway_presence(
+                client->state,
+                &presence->since,
+                presence->activities,
+                presence->status,
+                &presence->afk
+            );
+        }
     }
     else {
         success = state_set_gateway_presence(
