@@ -52,7 +52,7 @@ static bool construct_embed_fields_from_json(discord_embed *embed, json_object *
 
         list_item item = {0};
         item.type = L_TYPE_GENERIC;
-        item.size = sizeof(*field);
+        item.size = sizeof(field);
         item.data = field;
 
         success = list_append(embed->fields, &item);

@@ -8,7 +8,7 @@ typedef struct discord_options {
     const logctx *log;
 
     discord_gateway_intents intent;
-    const discord_gateway_presence *presence;
+    const discord_presence *presence;
 
     /* passthrough state options */
     size_t max_messages;
@@ -32,7 +32,7 @@ discord *discord_init(const char *, const discord_options *);
 bool discord_connect_gateway(discord *);
 void discord_disconnect_gateway(discord *);
 
-bool discord_set_presence(discord *, const discord_gateway_presence *);
+bool discord_set_presence(discord *, const discord_presence *);
 
 bool discord_send_message(discord *, snowflake, const discord_message_reply *);
 

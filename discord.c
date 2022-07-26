@@ -178,7 +178,7 @@ void discord_disconnect_gateway(discord *client){
     gateway_disconnect(client->gateway);
 }
 
-bool discord_set_presence(discord *client, const discord_gateway_presence *presence){
+bool discord_set_presence(discord *client, const discord_presence *presence){
     if (!client){
         log_write(
             logger,
@@ -190,40 +190,16 @@ bool discord_set_presence(discord *client, const discord_gateway_presence *prese
         return false;
     }
 
-    bool success = false;
-
-    if (presence){
-        if (presence->raw_object){
-            success = state_set_gateway_presence_raw(
-                client->state,
-                presence->raw_object
-            );
-        }
-        else {
-            success = state_set_gateway_presence(
-                client->state,
-                &presence->since,
-                presence->activities,
-                presence->status,
-                &presence->afk
-            );
-        }
-    }
-    else {
-        success = state_set_gateway_presence(
-            client->state,
-            NULL,
-            NULL,
-            NULL,
-            NULL
-        );
-    }
+    bool success = state_set_presence(
+        client->state,
+        presence
+    );
 
     if (!success){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] discord_set_presence() - state_set_gateway_presence call failed\n",
+            "[%s] discord_set_presence() - state_set_presence call failed\n",
             __FILE__
         );
 
@@ -233,7 +209,7 @@ bool discord_set_presence(discord *client, const discord_gateway_presence *prese
     success = gateway_send(
         client->gateway,
         GATEWAY_OP_PRESENCE_UPDATE,
-        state_get_gateway_presence(client->state)
+        state_get_presence(client->state)
     );
 
     if (!success){

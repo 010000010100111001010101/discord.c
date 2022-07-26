@@ -177,7 +177,7 @@ static bool send_gateway_identify(discord_gateway *gateway){
         gateway->compress ? "true" : "false",
         gateway->large_threshold,
         gateway->state->intent,
-        state_get_gateway_presence_string(gateway->state),
+        state_get_presence_string(gateway->state),
         DISCORD_LIBRARY_OS,
         DISCORD_LIBRARY_NAME,
         DISCORD_LIBRARY_NAME

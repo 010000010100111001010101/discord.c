@@ -9,6 +9,7 @@
 
 #include "snowflake.h"
 
+typedef struct discord_activity discord_activity;
 typedef struct discord_application discord_application;
 typedef struct discord_channel discord_channel;
 typedef struct discord_embed discord_embed;
@@ -20,6 +21,7 @@ typedef struct discord_state discord_state;
 typedef struct discord_team discord_team;
 typedef struct discord_user discord_user;
 
+#include "activity.h"
 #include "application.h"
 #include "attachment.h"
 #include "channel.h"
@@ -72,19 +74,19 @@ typedef enum discord_gateway_intents {
     INTENT_ALL = 131071
 } discord_gateway_intents;
 
-typedef struct discord_gateway_presence {
+typedef struct discord_presence {
     json_object *raw_object;
 
     time_t since;
-    list *activities;
-    char *status;
+    const list *activities;
+    const char *status;
     bool afk;
-} discord_gateway_presence;
+} discord_presence;
 
 typedef struct discord_state_options {
     const logctx *log;
     discord_gateway_intents intent;
-    const discord_gateway_presence *presence;
+    const discord_presence *presence;
 
     size_t max_messages;
 } discord_state_options;
@@ -110,10 +112,14 @@ typedef struct discord_state {
 
 discord_state *state_init(const char *, const discord_state_options *);
 
-json_object *state_get_gateway_presence(discord_state *);
-const char *state_get_gateway_presence_string(discord_state *);
-bool state_set_gateway_presence(discord_state *, const time_t *, const list *, const char *, const bool *);
-bool state_set_gateway_presence_raw(discord_state *, json_object *);
+json_object *state_get_presence(discord_state *);
+const char *state_get_presence_string(discord_state *);
+
+bool state_set_presence(discord_state *, const discord_presence *);
+bool state_set_presence_since(discord_state *, time_t);
+bool state_set_presence_activities(discord_state *, const list *);
+bool state_set_presence_status(discord_state *, const char *);
+bool state_set_presence_afk(discord_state *, bool);
 
 const discord_message *state_set_message(discord_state *, json_object *, bool);
 const discord_message *state_get_message(discord_state *, snowflake);
@@ -125,7 +131,5 @@ const discord_user *state_set_user(discord_state *, json_object *);
 const discord_user *state_get_user(discord_state *, snowflake);
 
 void state_free(discord_state *);
-
-void gateway_presence_free(discord_gateway_presence *);
 
 #endif

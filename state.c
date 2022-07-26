@@ -53,6 +53,20 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
     }
 
     state->user_pointer = NULL;
+    state->presence = json_object_new_object();
+
+    if (!state->presence){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_init() - presence object initialization failed\n",
+            __FILE__
+        );
+
+        state_free(state);
+
+        return NULL;
+    }
 
     if (opts){
         logger = opts->log;
@@ -61,29 +75,16 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         state->intent = opts->intent;
 
         if (opts->presence){
-            bool success = false;
-
-            if (opts->presence->raw_object){
-                success = state_set_gateway_presence_raw(
-                    state,
-                    opts->presence->raw_object
-                );
-            }
-            else {
-                success = state_set_gateway_presence(
-                    state,
-                    &opts->presence->since,
-                    opts->presence->activities,
-                    opts->presence->status,
-                    &opts->presence->afk
-                );
-            }
+            bool success = state_set_presence(
+                state,
+                opts->presence
+            );
 
             if (!success){
                 log_write(
                     logger,
                     LOG_ERROR,
-                    "[%s] state_init() - state_set_gateway_presence call failed\n",
+                    "[%s] state_init() - state_set_presence call failed\n",
                     __FILE__
                 );
 
@@ -159,12 +160,12 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
     return state;
 }
 
-json_object *state_get_gateway_presence(discord_state *state){
+json_object *state_get_presence(discord_state *state){
     if (!state){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] state_get_gateway_presence() - state is NULL\n",
+            "[%s] state_get_presence() - state is NULL\n",
             __FILE__
         );
 
@@ -174,12 +175,12 @@ json_object *state_get_gateway_presence(discord_state *state){
     return state->presence;
 }
 
-const char *state_get_gateway_presence_string(discord_state *state){
+const char *state_get_presence_string(discord_state *state){
     if (!state){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] state_get_gateway_presence_string() - state is NULL\n",
+            "[%s] state_get_presence_string() - state is NULL\n",
             __FILE__
         );
 
@@ -189,17 +190,189 @@ const char *state_get_gateway_presence_string(discord_state *state){
     return state->presence ? json_object_to_json_string(state->presence) : "null";
 }
 
-bool state_set_gateway_presence(discord_state *state, const time_t *since, const list *activities, const char *status, const bool *afk){
+bool state_set_presence(discord_state *state, const discord_presence *presence){
     if (!state){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] state_set_gateway_presence() - state is NULL\n",
+            "[%s] state_set_presence() - state is NULL\n",
             __FILE__
         );
 
         return false;
     }
+    else if (!presence){
+        json_object *obj = json_object_new_object();
+
+        if (!obj){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] state_set_presence() - presence object initialization failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+
+        json_object_put(state->presence);
+
+        state->presence = obj;
+
+        return true;
+    }
+    else if (presence->raw_object){
+        if (!json_merge_objects(presence->raw_object, state->presence)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] state_set_presence() - json_merge_objects call failed\n",
+                __FILE__
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    bool success = state_set_presence_since(state, presence->since);
+
+    if (!success){
+        return false;
+    }
+
+    success = state_set_presence_activities(state, presence->activities);
+
+    if (!success){
+        return false;
+    }
+
+    success = state_set_presence_status(state, presence->status);
+
+    if (!success){
+        return false;
+    }
+
+    success = state_set_presence_afk(state, presence->afk);
+
+    return success;
+}
+
+bool state_set_presence_since(discord_state *state, time_t since){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_presence_since() - state is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    json_object *obj = json_object_new_int64(since);
+
+    if (!obj){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_since() - since object initialization failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    if (json_object_object_add(state->presence, "since", obj)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_since() - json_object_object_add call failed for since\n",
+            __FILE__
+        );
+
+        json_object_put(obj);
+
+        return false;
+    }
+
+    return true;
+}
+
+bool state_set_presence_activities(discord_state *state, const list *activities){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_presence_activities() - state is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    size_t length = list_get_length(activities);
+    json_object *obj = json_object_new_array_ext(length);
+
+    if (!obj){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_activities() - activities object initialization failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    for (size_t index = 0; index < length; ++index){
+        const discord_activity *activity = list_get_generic(activities, index);
+        json_object *activityobj = activity_to_json(activity);
+
+        if (json_object_array_add(obj, activityobj)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] state_set_presence_activities() - json_object_array_add call failed\n",
+                __FILE__
+            );
+
+            json_object_put(obj);
+
+            return false;
+        }
+    }
+
+    if (json_object_object_add(state->presence, "activities", obj)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_activities() - json_object_object_add call failed\n",
+            __FILE__
+        );
+
+        json_object_put(obj);
+
+        return false;
+    }
+
+    return true;
+}
+
+bool state_set_presence_status(discord_state *state, const char *status){
+    if (!state){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] state_set_presence_status() - state is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    json_object *obj = NULL;
 
     if (status){
         bool found = false;
@@ -216,160 +389,79 @@ bool state_set_gateway_presence(discord_state *state, const time_t *since, const
             log_write(
                 logger,
                 LOG_WARNING,
-                "[%s] state_set_gateway_presence() - valid statuses are offline, invisible, idle, dnd, online\n",
+                "[%s] state_set_presence_status() - valid statuses are invisible, idle, dnd, online\n",
                 __FILE__,
                 status
             );
 
             return false;
         }
-    }
 
-    log_write(
-        logger,
-        LOG_DEBUG,
-        "[%s] state_set_gateway_presence() - updating gateway presence state\n",
-        __FILE__
-    );
-
-    json_object *presenceobj = state->presence ? state->presence : json_object_new_object();
-
-    if (!presenceobj){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] state_set_gateway_presence() - presence object initialization failed\n",
-            __FILE__
-        );
-
-        return false;
-    }
-
-    json_object *obj = NULL;
-
-    if (since){
-        obj = json_object_new_int64(*since);
-
-        if (!obj){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] state_set_gateway_presence() - since object initialization failed\n",
-                __FILE__
-            );
-
-            json_object_put(presenceobj);
-
-            return false;
-        }
-    }
-    else {
-        obj = json_object_object_get(presenceobj, "since");
-    }
-
-    json_object_object_add(presenceobj, "since", obj);
-
-    if (activities){
-        obj = list_to_json_array(activities);
-
-        if (!obj){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] state_set_gateway_presence() - activities object initialization failed\n",
-                __FILE__
-            );
-
-            json_object_put(presenceobj);
-
-            return false;
-        }
-    }
-    else {
-        obj = json_object_object_get(presenceobj, "activities");
-    }
-
-    json_object_object_add(presenceobj, "activities", obj);
-
-    if (status){
         obj = json_object_new_string(status);
 
         if (!obj){
             log_write(
                 logger,
                 LOG_ERROR,
-                "[%s] state_set_gateway_presence() - status object initialization failed\n",
+                "[%s] state_set_presence_status() - status object initialization failed\n",
                 __FILE__
             );
-
-            json_object_put(presenceobj);
 
             return false;
         }
     }
-    else {
-        obj = json_object_object_get(presenceobj, "status");
+
+    if (json_object_object_add(state->presence, "status", obj)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_status() - json_object_object_add call failed\n",
+            __FILE__
+        );
+
+        json_object_put(obj);
+
+        return false;
     }
-
-    json_object_object_add(presenceobj, "status", obj);
-
-    if (afk){
-        obj = json_object_new_boolean(*afk);
-
-        if (!obj){
-            log_write(
-                logger,
-                LOG_ERROR,
-                "[%s] state_set_gateway_presence() - afk object initialization failed\n",
-                __FILE__
-            );
-
-            json_object_put(presenceobj);
-
-            return false;
-        }
-    }
-    else {
-        obj = json_object_object_get(presenceobj, "afk");
-    }
-
-    json_object_object_add(presenceobj, "afk", obj);
-
-    state->presence = presenceobj;
 
     return true;
 }
 
-bool state_set_gateway_presence_raw(discord_state *state, json_object *data){
+bool state_set_presence_afk(discord_state *state, bool afk){
     if (!state){
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] state_set_gateway_presence_from_json() - state is NULL\n",
+            "[%s] state_set_presence_afk() - state is NULL\n",
             __FILE__
         );
 
         return false;
     }
 
-    json_object *copy = json_object_get(data);
+    json_object *obj = json_object_new_boolean(afk);
 
-    if (!copy){
+    if (!obj){
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] state_set_gateway_presence_raw() - json_object_get call failed\n",
+            "[%s] state_set_presence_afk() - afk object initialization failed\n",
             __FILE__
         );
 
         return false;
     }
 
-    if (state->presence){
-        json_object_put(state->presence);
-    }
+    if (json_object_object_add(state->presence, "afk", obj)){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] state_set_presence_afk() - json_object_object_add call failed\n",
+            __FILE__
+        );
 
-    state->presence = copy;
+        return false;
+    }
 
     return true;
 }
@@ -819,21 +911,4 @@ void state_free(discord_state *state){
 
     free(state->token);
     free(state);
-}
-
-void gateway_presence_free(discord_gateway_presence *presence){
-    if (!presence){
-        log_write(
-            logger,
-            LOG_DEBUG,
-            "[%s] gateway_presence_free() - presence is NULL\n",
-            __FILE__
-        );
-
-        return;
-    }
-
-    list_free(presence->activities);
-    free(presence->status);
-    free(presence);
 }
