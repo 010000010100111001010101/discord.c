@@ -706,13 +706,13 @@ const discord_emoji *state_set_emoji(discord_state *state, json_object *data){
     }
 
     map_item k = {0};
-    k.type = M_TYPE_GENERIC;
+    k.type = M_TYPE_UINT;
     k.size = sizeof(emoji->id);
     k.data_copy = &emoji->id;
 
     map_item v = {0};
     v.type = M_TYPE_GENERIC;
-    v.size = sizeof(*emoji);
+    v.size = sizeof(emoji);
     v.data = emoji;
     v.generic_free = emoji_free;
 
@@ -834,13 +834,13 @@ const discord_user *state_set_user(discord_state *state, json_object *data){
     }
 
     map_item k = {0};
-    k.type = M_TYPE_GENERIC;
+    k.type = M_TYPE_UINT;
     k.size = sizeof(user->id);
     k.data_copy = &user->id;
 
     map_item v = {0};
     v.type = M_TYPE_GENERIC;
-    v.size = sizeof(*user);
+    v.size = sizeof(user);
     v.data = user;
     v.generic_free = user_free;
 
