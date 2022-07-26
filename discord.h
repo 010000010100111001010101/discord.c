@@ -33,6 +33,7 @@ bool discord_connect_gateway(discord *);
 void discord_disconnect_gateway(discord *);
 
 bool discord_set_presence(discord *, const discord_presence *);
+bool discord_modify_presence(discord *, const time_t *, const list *, const char *, const bool *);
 
 bool discord_send_message(discord *, snowflake, const discord_message_reply *);
 

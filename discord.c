@@ -224,6 +224,66 @@ bool discord_set_presence(discord *client, const discord_presence *presence){
     return success;
 }
 
+bool discord_modify_presence(discord *client, const time_t *since, const list *activities, const char *status, const bool *afk){
+    if (!client){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] discord_set_presence() - client is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    bool success = true;
+
+    if (since){
+        success = state_set_presence_since(client->state, *since);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    if (activities){
+        success = state_set_presence_activities(client->state, activities);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    if (status){
+        success = state_set_presence_status(client->state, status);
+
+        if (!success){
+            return false;
+        }
+    }
+
+    if (afk){
+        success = state_set_presence_afk(client->state, *afk);
+    }
+
+    success = gateway_send(
+        client->gateway,
+        GATEWAY_OP_PRESENCE_UPDATE,
+        state_get_presence(client->state)
+    );
+
+    if (!success){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] discord_modify_presence() - gateway_send call failed\n",
+            __FILE__
+        );
+    }
+
+    return success;
+}
+
 bool discord_send_message(discord *client, snowflake channelid, const discord_message_reply *message){
     if (!client){
         log_write(
