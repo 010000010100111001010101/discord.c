@@ -686,10 +686,6 @@ static bool handle_gateway_writable(discord_gateway *gateway, struct lws *wsi){
         return false;
     }
 
-    if (queuelen--){
-        lws_callback_on_writable(wsi);
-    }
-
     return true;
 }
 
