@@ -261,6 +261,31 @@ static bool construct_activity_from_json(discord_activity *activity){
     return true;
 }
 
+discord_activity_type activity_type_from_string(const char *input){
+    discord_activity_type type = 0;
+
+    if (!strcmp(input, "playing") || !strcmp(input, "game")){
+        type = ACTIVITY_GAME;
+    }
+    else if (!strcmp(input, "streaming")){
+        type = ACTIVITY_STREAMING;
+    }
+    else if (!strcmp(input, "listening")){
+        type = ACTIVITY_LISTENING;
+    }
+    else if (!strcmp(input, "watching")){
+        type = ACTIVITY_WATCHING;
+    }
+    else if (!strcmp(input, "custom")){
+        type = ACTIVITY_CUSTOM;
+    }
+    else if (!strcmp(input, "competing")){
+        type = ACTIVITY_COMPETING;
+    }
+
+    return type;
+}
+
 discord_activity *activity_init(discord_state *state, json_object *data){
     if (!state){
         log_write(

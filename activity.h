@@ -73,6 +73,8 @@ typedef struct discord_activity {
     list *buttons;
 } discord_activity;
 
+discord_activity_type activity_type_from_string(const char *);
+
 discord_activity *activity_init(discord_state *, json_object *);
 
 json_object *activity_to_json(const discord_activity *);

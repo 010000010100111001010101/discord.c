@@ -1,9 +1,5 @@
 #include "discord.h"
 
-/*
- * logger is global
- * all extern logger vars are const
- */
 const logctx *logger = NULL;
 
 static bool set_application_information(discord *client){
@@ -294,6 +290,16 @@ bool discord_send_message(discord *client, snowflake channelid, const discord_me
         );
 
         return false;
+    }
+    else if (!message->content && !message->embed && !message->embeds && !message->sticker_ids){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] discord_send_message() - one of content, file, embeds, sticker_ids required\n",
+            __FILE__
+        );
+
+        return true;
     }
 
     json_object *data = message_reply_to_json(message);

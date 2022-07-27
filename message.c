@@ -954,16 +954,6 @@ json_object *message_reply_to_json(const discord_message_reply *reply){
 
         return NULL;
     }
-    else if (!reply->content && !reply->embed && !reply->embeds && !reply->sticker_ids){
-        log_write(
-            logger,
-            LOG_WARNING,
-            "[%s] message_reply_to_json() - one of content, file, embeds, sticker_ids required\n",
-            __FILE__
-        );
-
-        return NULL;
-    }
 
     json_object *replyobj = json_object_new_object();
 
