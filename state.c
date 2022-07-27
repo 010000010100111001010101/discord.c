@@ -37,6 +37,17 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         return NULL;
     }
 
+    if (opts){
+        logger = opts->log;
+
+        state->log = opts->log;
+        state->intent = opts->intent;
+
+        state->max_messages = opts->max_messages;
+    }
+
+    state->user_pointer = NULL;
+
     state->token = string_duplicate(token);
 
     if (!state->token){
@@ -52,7 +63,6 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         return NULL;
     }
 
-    state->user_pointer = NULL;
     state->presence = json_object_new_object();
 
     if (!state->presence){
@@ -66,35 +76,6 @@ discord_state *state_init(const char *token, const discord_state_options *opts){
         state_free(state);
 
         return NULL;
-    }
-
-    if (opts){
-        logger = opts->log;
-
-        state->log = opts->log;
-        state->intent = opts->intent;
-
-        if (opts->presence){
-            bool success = state_set_presence(
-                state,
-                opts->presence
-            );
-
-            if (!success){
-                log_write(
-                    logger,
-                    LOG_ERROR,
-                    "[%s] state_init() - state_set_presence call failed\n",
-                    __FILE__
-                );
-
-                state_free(state);
-
-                return NULL;
-            }
-        }
-
-        state->max_messages = opts->max_messages;
     }
 
     state->http = http_init(state->token, NULL);

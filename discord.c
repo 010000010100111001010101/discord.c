@@ -77,7 +77,7 @@ discord *discord_init(const char *token, const discord_options *opts){
     if (opts){
         sopts.log = opts->log;
         sopts.intent = opts->intent;
-        sopts.presence = opts->presence;
+        sopts.max_messages = opts->max_messages;
 
         gopts.compress = opts->compress;
         gopts.large_threshold = opts->large_threshold;
@@ -97,6 +97,20 @@ discord *discord_init(const char *token, const discord_options *opts){
         discord_free(client);
 
         return NULL;
+    }
+    else if (opts && opts->presence){
+        if (!state_set_presence(client->state, opts->presence)){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] discord_init() - state_set_presence call failed\n",
+                __FILE__
+            );
+
+            discord_free(client);
+
+            return NULL;
+        }
     }
 
     client->state->event_context = client;

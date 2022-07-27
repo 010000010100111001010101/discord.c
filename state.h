@@ -86,7 +86,6 @@ typedef struct discord_presence {
 typedef struct discord_state_options {
     const logctx *log;
     discord_gateway_intents intent;
-    const discord_presence *presence;
 
     size_t max_messages;
 } discord_state_options;
