@@ -840,7 +840,7 @@ int handle_gateway_event(struct lws *wsi, enum lws_callback_reasons reason, void
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
         log_write(
             logger,
-            LOG_WARNING,
+            LOG_DEBUG,
             "[%s] handle_gateway_event() - gateway server initiated close\n",
             __FILE__
         );

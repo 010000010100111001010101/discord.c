@@ -507,6 +507,10 @@ static bool construct_message(discord_message *message){
             success = construct_message_attachments(message, valueobj);
         }
         else if (!strcmp(key, "embeds")){
+            if (message->embeds){
+                list_free(message->embeds);
+            }
+
             message->embeds = embed_list_from_json_array(message->state, valueobj);
 
             success = message->embeds;

@@ -274,6 +274,10 @@ bool discord_modify_presence(discord *client, const time_t *since, const list *a
 
     if (afk){
         success = state_set_presence_afk(client->state, *afk);
+
+        if (!success){
+            return false;
+        }
     }
 
     success = gateway_send(
