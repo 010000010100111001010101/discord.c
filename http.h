@@ -34,6 +34,7 @@ typedef struct discord_http_options {
 typedef struct discord_http {
     const char *token;
 
+    bool ratelimited;
     bool globalratelimit;
     map *buckets;
 } discord_http;

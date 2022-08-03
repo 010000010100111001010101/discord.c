@@ -52,7 +52,7 @@ static bool is_rate_limited(discord_http *http, const char *bucket){
             log_write(
                 logger,
                 LOG_WARNING,
-                "[%s] is_rate_limited() - rate limit expires in %ll seconds (bucket: %s)\n",
+                "[%s] is_rate_limited() - rate limit expires in %lu seconds (bucket: %s)\n",
                 __FILE__,
                 diff,
                 bucket
@@ -64,6 +64,7 @@ static bool is_rate_limited(discord_http *http, const char *bucket){
         map_remove(http->buckets, bucketlen, bucket);
     }
 
+    http->ratelimited = false;
     http->globalratelimit = false;
 
     return false;
@@ -105,6 +106,8 @@ static bool set_rate_limited(discord_http *http, const char *bucket, double retr
             __FILE__
         );
     }
+
+    http->ratelimited = true;
 
     return success;
 }

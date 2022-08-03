@@ -347,7 +347,7 @@ bool discord_send_message(discord *client, snowflake channelid, const discord_me
             __FILE__
         );
 
-        success = false;
+        success = client->state->http->ratelimited;
     }
     else if (res->status != 200){
         log_write(
