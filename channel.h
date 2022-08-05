@@ -62,6 +62,9 @@ typedef struct discord_channel {
 
 discord_channel *channel_init(discord_state *, json_object *);
 
+/* API calls */
+bool channel_send_message(discord_channel *, const discord_message_reply *);
+
 void channel_free(void *);
 
 #endif

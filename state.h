@@ -17,6 +17,7 @@ typedef struct discord_emoji discord_emoji;
 typedef struct discord_http discord_http;
 typedef struct discord_member discord_member;
 typedef struct discord_message discord_message;
+typedef struct discord_message_reply discord_message_reply;
 typedef struct discord_state discord_state;
 typedef struct discord_team discord_team;
 typedef struct discord_user discord_user;

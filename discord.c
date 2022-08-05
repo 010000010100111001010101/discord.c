@@ -309,6 +309,16 @@ bool discord_send_message(discord *client, snowflake channelid, const discord_me
 
         return false;
     }
+    else if (!message){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] discord_send_message() - message is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
     else if (!message->content && !message->embed && !message->embeds && !message->sticker_ids){
         log_write(
             logger,

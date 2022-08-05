@@ -179,6 +179,82 @@ discord_channel *channel_init(discord_state *state, json_object *data){
     return channel;
 }
 
+bool channel_send_message(discord_channel *channel, const discord_message_reply *message){
+    if (!channel){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] channel_send_message() - channel is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+    else if (!message){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] channel_send_message() - message is NULL\n",
+            __FILE__
+        );
+
+        return false;
+    }
+    else if (!message->content && !message->embed && !message->embeds && !message->sticker_ids){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] channel_send_message() - one of content, file, embeds, sticker_ids required\n",
+            __FILE__
+        );
+
+        return true;
+    }
+
+    json_object *data = message_reply_to_json(message);
+
+    if (!data){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] discord_send_message() - message_reply_to_json call failed\n",
+            __FILE__
+        );
+
+        return false;
+    }
+
+    discord_http_response *res = http_create_message(channel->state->http, channel->id, data);
+
+    json_object_put(data);
+
+    bool success = true;
+
+    if (!res){
+        log_write(
+            logger,
+            LOG_ERROR,
+            "[%s] discord_send_message() - http_create_message call failed\n",
+            __FILE__
+        );
+
+        success = channel->state->http->ratelimited;
+    }
+    else if (res->status != 200){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] discord_send_message() - request failed: %s\n",
+            __FILE__,
+            json_object_to_json_string(res->data)
+        );
+    }
+
+    http_response_free(res);
+
+    return success;
+}
+
 void channel_free(void *ptr){
     discord_channel *channel = ptr;
 
