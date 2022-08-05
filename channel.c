@@ -217,7 +217,7 @@ bool channel_send_message(discord_channel *channel, const discord_message_reply 
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] discord_send_message() - message_reply_to_json call failed\n",
+            "[%s] channel_send_message() - message_reply_to_json call failed\n",
             __FILE__
         );
 
@@ -234,7 +234,7 @@ bool channel_send_message(discord_channel *channel, const discord_message_reply 
         log_write(
             logger,
             LOG_ERROR,
-            "[%s] discord_send_message() - http_create_message call failed\n",
+            "[%s] channel_send_message() - http_create_message call failed\n",
             __FILE__
         );
 
@@ -244,7 +244,7 @@ bool channel_send_message(discord_channel *channel, const discord_message_reply 
         log_write(
             logger,
             LOG_WARNING,
-            "[%s] discord_send_message() - request failed: %s\n",
+            "[%s] channel_send_message() - request failed: %s\n",
             __FILE__,
             json_object_to_json_string(res->data)
         );
