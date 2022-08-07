@@ -1,6 +1,7 @@
 #include "snowflake.h"
 
 #include "log.h"
+#include "str.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -34,6 +35,22 @@ bool snowflake_from_string(const char *input, snowflake *output){
     *output = value;
 
     return true;
+}
+
+char *snowflake_to_string(snowflake input){
+    char *snowflakestr = string_create(
+        "%" PRIu64,
+        input
+    );
+
+    if (!snowflakestr){
+        DLOG(
+            "[%s] snowflake_to_string() - snowflake string alloc failed\n",
+            __FILE__
+        );
+    }
+
+    return snowflakestr;
 }
 
 time_t snowflake_get_creation_time(snowflake id){

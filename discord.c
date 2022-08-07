@@ -298,11 +298,65 @@ bool discord_modify_presence(discord *client, const time_t *since, const list *a
     return success;
 }
 
+const discord_user *discord_get_user(discord *client, snowflake id, bool fetch){
+    if (!client){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] discord_get_user() - client is NULL\n",
+            __FILE__
+        );
+
+        return NULL;
+    }
+
+    const discord_user *user = NULL;
+
+    if (fetch){
+        discord_http_response *res = http_get_user(client->state->http, id);
+
+        if (!res){
+            if (!client->state->http->ratelimited){
+                log_write(
+                    logger,
+                    LOG_ERROR,
+                    "[%s] discord_get_user() - http_get_user call failed\n",
+                    __FILE__
+                );
+            }
+
+            return NULL;
+        }
+        else if (res->status != 200){
+            log_write(
+                logger,
+                LOG_WARNING,
+                "[%s] discord_get_user() - request failed: %s\n",
+                __FILE__,
+                json_object_to_json_string(res->data)
+            );
+
+            http_response_free(res);
+
+            return NULL;
+        }
+
+        user = state_set_user(client->state, res->data);
+
+        http_response_free(res);
+    }
+    else {
+        user = state_get_user(client->state, id);
+    }
+
+    return user;
+}
+
 bool discord_send_message(discord *client, snowflake channelid, const discord_message_reply *message){
     if (!client){
         log_write(
             logger,
-            LOG_ERROR,
+            LOG_WARNING,
             "[%s] discord_send_message() - client is NULL\n",
             __FILE__
         );
@@ -350,14 +404,16 @@ bool discord_send_message(discord *client, snowflake channelid, const discord_me
     bool success = true;
 
     if (!res){
-        log_write(
-            logger,
-            LOG_ERROR,
-            "[%s] discord_send_message() - http_create_message call failed\n",
-            __FILE__
-        );
+        if (!client->state->http->ratelimited){
+            log_write(
+                logger,
+                LOG_ERROR,
+                "[%s] discord_send_message() - http_create_message call failed\n",
+                __FILE__
+            );
 
-        success = client->state->http->ratelimited;
+            success = false;
+        }
     }
     else if (res->status != 200){
         log_write(
