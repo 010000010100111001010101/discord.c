@@ -146,6 +146,17 @@ discord_user *user_init(discord_state *state, json_object *data){
 }
 
 time_t user_get_creation_time(const discord_user *user){
+    if (!user){
+        log_write(
+            logger,
+            LOG_WARNING,
+            "[%s] user_get_creation_time() - user is NULL\n",
+            __FILE__
+        );
+
+        return 0;
+    }
+
     return snowflake_get_creation_time(user->id);
 }
 
