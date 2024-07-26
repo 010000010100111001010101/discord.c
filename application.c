@@ -195,7 +195,7 @@ discord_application *application_init(discord_state *state, json_object *data){
     }
 
     application->state = state;
-    application->raw_object = data;
+    application->raw_object = json_object_get(data);
 
     if (!construct_application(application)){
         application_free(application);
