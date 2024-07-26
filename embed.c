@@ -457,7 +457,7 @@ discord_embed *embed_init(discord_state *state, json_object *data){
     embed->state = state;
 
     if (data){
-        embed->raw_object = data;
+        embed->raw_object = json_object_get(data);
 
         if (!construct_embed_from_json(embed)){
             embed_free(embed);
